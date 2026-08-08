@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+/** Shared so the migration script resolves the same path the app will open. */
+export const DEFAULT_DATABASE_URL = './data/brewlog.db';
+export const DEFAULT_UPLOAD_DIR = './data/uploads';
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -7,10 +11,14 @@ const envSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
-    DATABASE_URL: z.string().min(1),
+    // Paths, not secrets: a default here is a convenience, not a way to boot half-configured.
+    // The container overrides both with its volume paths.
+    DATABASE_URL: z.string().min(1).default(DEFAULT_DATABASE_URL),
+    UPLOAD_DIR: z.string().min(1).default(DEFAULT_UPLOAD_DIR),
+    // No defaults below this line. Starting without a real password or session key would mean
+    // running an unprotected journal that looks protected.
     AUTH_PASSWORD_HASH: z.string().min(1),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
-    UPLOAD_DIR: z.string().min(1),
     /**
      * Directory holding the built SPA. Set in the container, absent in development where Vite
      * serves the frontend on its own port.

@@ -21,25 +21,30 @@ npm install
 cp .env.example .env
 ```
 
-Fill in `.env`. Two values need generating:
+Only two values in `.env` are required — the rest have sensible defaults for local work:
 
 ```bash
-# the password that opens the journal — 12 characters minimum, a passphrase works best
+# AUTH_PASSWORD_HASH — the password that opens the journal.
+# 12 characters minimum; a passphrase of a few words beats a short cryptic one.
 printf '%s' 'your passphrase here' | npm run auth:hash --workspace @brewlog/api
 
-# the key that signs the session cookie
+# SESSION_SECRET — signs the session cookie
 openssl rand -hex 32
 ```
 
-Then apply the migrations and start both apps:
+Paste both into `.env`, then:
 
 ```bash
-npm run db:migrate
-npm run dev        # API on :3000, web on :5173
+npm run db:migrate   # creates ./data/brewlog.db and applies the schema
+npm run dev          # API on :3000, web on :5173
 ```
 
-Open http://localhost:5173. The Vite dev server proxies `/api` to the API, so there is no CORS
-setup to think about.
+Open http://localhost:5173 and unlock with the passphrase. The Vite dev server proxies `/api`
+to the API, so there is no CORS setup to think about.
+
+The dev scripts read `.env` through Node's own `--env-file-if-exists`, so nothing needs to be
+exported into the shell and there is no dotenv dependency. `DATABASE_URL` and `UPLOAD_DIR`
+default to `./data/…` and only need setting if you want them somewhere else.
 
 ## Running the container
 
