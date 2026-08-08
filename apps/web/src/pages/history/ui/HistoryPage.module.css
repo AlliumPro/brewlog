@@ -1,0 +1,29 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  align-items: flex-start;
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  list-style: none;
+}
+
+.count {
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+}
+
+@media (width >= 48rem) {
+  .title {
+    font-size: var(--text-3xl);
+  }
+}

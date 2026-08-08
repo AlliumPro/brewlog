@@ -1,0 +1,75 @@
+.display {
+  display: inline-flex;
+  align-items: center;
+}
+
+.visual {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.dotFilled {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: var(--color-accent);
+  border-radius: var(--radius-full);
+}
+
+.dotEmpty {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+
+.lg .dotFilled,
+.lg .dotEmpty {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.input {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard);
+}
+
+.option:hover {
+  border-color: var(--color-accent-deep);
+}
+
+.option[data-state='checked'] {
+  color: var(--color-accent-contrast);
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.optionNumber {
+  pointer-events: none;
+}

@@ -1,0 +1,52 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+  color: var(--color-accent);
+}
+
+.root {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  /* Full-width touch target with room for the thumb to overhang the track. */
+  height: 2.75rem;
+  touch-action: none;
+  user-select: none;
+}
+
+.track {
+  position: relative;
+  flex-grow: 1;
+  height: 0.25rem;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.range {
+  position: absolute;
+  height: 100%;
+  background-color: var(--color-accent-deep);
+  border-radius: var(--radius-full);
+}
+
+.thumb {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: var(--color-accent);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+}
+
+.thumb:hover {
+  background-color: var(--color-accent-hover);
+}

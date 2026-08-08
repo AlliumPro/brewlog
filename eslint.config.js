@@ -69,6 +69,16 @@ export default tseslint.config(
     },
   },
 
+  // RTK Query marks "this endpoint takes no argument" and "this endpoint returns no body"
+  // with `void` in its generics. That is the library's documented idiom — `undefined` would
+  // force every call site to pass one explicitly — so the rule is off where endpoints live.
+  {
+    files: ['apps/web/src/**/api/*.ts'],
+    rules: {
+      '@typescript-eslint/no-invalid-void-type': 'off',
+    },
+  },
+
   // Build-time config files inside the workspaces run in Node, not in the browser.
   {
     files: ['apps/*/vite.config.ts', 'apps/*/vitest.config.ts', 'apps/*/drizzle.config.ts'],
@@ -80,7 +90,7 @@ export default tseslint.config(
   // types promise. The contract itself is enforced by the response Zod schemas at runtime and
   // by the OpenAPI coverage test, so these rules would only add casts without adding safety.
   {
-    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/src/test/**'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -89,6 +99,23 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
+    },
+  },
+
+  // End-to-end specs: TypeScript without type information, Cypress globals.
+  {
+    files: ['cypress/**/*.ts', 'cypress.config.ts'],
+    extends: [tseslint.configs.recommended],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        cy: 'readonly',
+        Cypress: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        before: 'readonly',
+        beforeEach: 'readonly',
+      },
     },
   },
 

@@ -1,0 +1,64 @@
+.button {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+
+  /* 44px tall at the default font size: a comfortable thumb target at the bar. */
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-base);
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.primary {
+  color: var(--color-accent-contrast);
+  background-color: var(--color-accent);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.secondary {
+  color: var(--color-text);
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-border-strong);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.ghost {
+  padding-inline: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--color-text);
+  background-color: var(--color-surface);
+}
+
+.danger {
+  color: var(--color-text);
+  background-color: var(--color-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: var(--color-accent-deep);
+}
+
+.fullWidth {
+  width: 100%;
+}

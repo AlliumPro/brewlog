@@ -1,0 +1,27 @@
+.main {
+  max-width: var(--layout-max-width);
+  padding: var(--space-8) var(--space-4) var(--space-16);
+  margin-inline: auto;
+}
+
+/* Visible only once focused, so keyboard users can jump past the nav. */
+.skipLink {
+  position: absolute;
+  left: var(--space-4);
+  z-index: 40;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-accent-contrast);
+  background-color: var(--color-accent);
+  border-radius: var(--radius-md);
+  transform: translateY(-200%);
+}
+
+.skipLink:focus {
+  transform: translateY(var(--space-2));
+}
+
+@media (width >= 48rem) {
+  .main {
+    padding-inline: var(--space-8);
+  }
+}

@@ -1,0 +1,85 @@
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.skeletonLineWide {
+  width: 60%;
+  height: 1.5rem;
+  background-color: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.skeletonLineNarrow {
+  width: 35%;
+  height: 1rem;
+  background-color: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.panel {
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.panelError {
+  border-color: var(--color-danger);
+}
+
+.panelTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+}
+
+.panelHint {
+  max-width: 32rem;
+  margin: var(--space-2) auto 0;
+  color: var(--color-text-muted);
+}
+
+.panelAction {
+  margin-top: var(--space-6);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonLineWide,
+  .skeletonLineNarrow {
+    animation: none;
+  }
+}

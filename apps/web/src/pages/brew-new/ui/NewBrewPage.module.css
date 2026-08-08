@@ -1,0 +1,15 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+@media (width >= 48rem) {
+  .title {
+    font-size: var(--text-3xl);
+  }
+}
