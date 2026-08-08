@@ -17,7 +17,8 @@ export function registerAuthRoutes(app: App, { authService, env }: AuthRouteDeps
   const cookieOptions = {
     signed: true,
     httpOnly: true,
-    sameSite: 'lax',
+    // See the note in plugins/auth.ts: nothing here needs cross-site cookie delivery.
+    sameSite: 'strict',
     secure: env.NODE_ENV !== 'development',
     path: '/',
   } as const;

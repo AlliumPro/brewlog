@@ -27,7 +27,8 @@ describe('auth', () => {
 
     expect(cookie).toBeDefined();
     expect(cookie?.httpOnly).toBe(true);
-    expect(cookie?.sameSite?.toLowerCase()).toBe('lax');
+    // Strict, not Lax: nothing in this app needs the cookie on a cross-site navigation.
+    expect(cookie?.sameSite?.toLowerCase()).toBe('strict');
   });
 
   it('rejects a wrong password with 401 and no cookie', async () => {

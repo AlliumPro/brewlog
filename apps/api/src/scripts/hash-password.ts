@@ -16,6 +16,19 @@ if (password === '') {
   throw new Error("No password on stdin. Usage: printf %s 'your password' | npm run auth:hash");
 }
 
+/**
+ * One password guards the whole journal and there is no second factor behind it, so a short
+ * one is refused outright rather than warned about. Length beats character classes: a
+ * passphrase of ordinary words is both stronger and easier to type on a phone.
+ */
+const MINIMUM_LENGTH = 12;
+
+if (password.length < MINIMUM_LENGTH) {
+  throw new Error(
+    `The password must be at least ${String(MINIMUM_LENGTH)} characters. A passphrase of three or four words works well.`,
+  );
+}
+
 // OWASP baseline for argon2id: 19 MiB memory, 2 iterations, 1 lane.
 const digest = await hash(password, { memoryCost: 19_456, timeCost: 2, parallelism: 1 });
 

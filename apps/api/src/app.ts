@@ -123,12 +123,19 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        // Stylesheets themselves are bundled files, so no inline <style> is allowed.
+        styleSrc: ["'self'"],
+        // Radix primitives position their popovers by writing to the element's style
+        // attribute. style-src-attr is scoped to exactly that, so a stray inline <style>
+        // block is still refused — which is the part an injected payload would use.
+        styleSrcAttr: ["'unsafe-inline'"],
         imgSrc: ["'self'", 'data:'],
         fontSrc: ["'self'"],
         connectSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
       },
     },
   });

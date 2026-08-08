@@ -20,7 +20,10 @@ const plugin: FastifyPluginAsync<AuthPluginOptions> = async (app, options) => {
     secret: env.SESSION_SECRET,
     parseOptions: {
       httpOnly: true,
-      sameSite: 'lax',
+      // Strict rather than Lax: the journal has no cross-site entry points to preserve —
+      // no OAuth callback, no payment return — so there is nothing to trade for the weaker
+      // setting, and Strict removes cross-site request forgery as a category.
+      sameSite: 'strict',
       secure: env.NODE_ENV !== 'development',
       path: '/',
     },
