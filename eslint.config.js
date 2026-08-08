@@ -75,12 +75,20 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
 
-  // Tests may assert on values the type system cannot narrow.
+  // Integration tests assert on wire JSON. `inject().json()` is untyped by design, and that
+  // is the point: the test checks what the server actually put on the wire, not what the
+  // types promise. The contract itself is enforced by the response Zod schemas at runtime and
+  // by the OpenAPI coverage test, so these rules would only add casts without adding safety.
   {
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
     },
   },
 

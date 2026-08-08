@@ -174,9 +174,14 @@ Error envelope for every non-2xx: `{ "error": { "code": string, "message": strin
 | DELETE | `/api/brews/:id/photo` | —                   | `204`              | `401`, `404`                                          |
 
 Type is detected from file content, not from the extension or the client-supplied content type.
-Accepted: JPEG, PNG, WebP, HEIC. Stored re-encoded to WebP, long side capped at 1600 px, EXIF
-stripped (it carries GPS coordinates). Served through the authenticated route, never from a
-guessable public path.
+Accepted: JPEG, PNG, WebP, AVIF, GIF, TIFF. Stored re-encoded to WebP, long side capped at
+1600 px, EXIF stripped (it carries GPS coordinates). Served through the authenticated route, never
+from a guessable public path.
+
+HEIC is **not** accepted, correcting the first draft of this spec: sharp's prebuilt binary ships
+without a HEIC decoder for licensing reasons, and adding one would mean building sharp from source
+in the image. This is not a dead end on a phone — iOS Safari converts HEIC to JPEG when a photo is
+chosen through a file input.
 
 ### Suggestions
 

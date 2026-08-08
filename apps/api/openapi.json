@@ -1,0 +1,3595 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "BrewLog API",
+    "description": "Personal coffee brewing journal. Every route except the login and the health probes requires a session cookie.",
+    "version": "0.1.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "brewlog_session"
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Liveness probe",
+        "tags": [
+          "operational"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Readiness probe: database reachable",
+        "tags": [
+          "operational"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "degraded"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "degraded"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Exchange the site password for a session cookie",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "password"
+                ],
+                "description": "Password gate"
+              }
+            }
+          },
+          "description": "Password gate"
+        },
+        "responses": {
+          "200": {
+            "description": "Active session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "authenticated"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Active session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Wrong password"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Too many attempts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Revoke the current session",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    }
+                  },
+                  "required": [
+                    "authenticated"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "summary": "Check whether the current session is still valid",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Active session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "authenticated"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Active session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brews": {
+      "get": {
+        "summary": "List brews, newest first",
+        "tags": [
+          "brews"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "v60",
+                    "aeropress",
+                    "espresso",
+                    "chemex",
+                    "french_press",
+                    "moka",
+                    "cold_brew",
+                    "other"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "v60",
+                      "aeropress",
+                      "espresso",
+                      "chemex",
+                      "french_press",
+                      "moka",
+                      "cold_brew",
+                      "other"
+                    ]
+                  }
+                }
+              ]
+            },
+            "in": "query",
+            "name": "method",
+            "required": false,
+            "description": "Repeat the parameter to filter by several methods"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "in": "query",
+            "name": "bean",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Free text over bean name and roaster"
+          },
+          {
+            "schema": {
+              "default": "date",
+              "type": "string",
+              "enum": [
+                "date",
+                "rating"
+              ]
+            },
+            "in": "query",
+            "name": "sort",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "v60",
+                              "aeropress",
+                              "espresso",
+                              "chemex",
+                              "french_press",
+                              "moka",
+                              "cold_brew",
+                              "other"
+                            ]
+                          },
+                          "methodOther": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "beanName": {
+                            "type": "string"
+                          },
+                          "roaster": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "roastDate": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "grindSize": {
+                            "type": "string"
+                          },
+                          "doseGrams": {
+                            "type": "number"
+                          },
+                          "waterMl": {
+                            "type": "number"
+                          },
+                          "waterTempC": {
+                            "type": "number"
+                          },
+                          "brewTimeSeconds": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "notes": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "rating": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "ratio": {
+                            "type": "number",
+                            "description": "waterMl / doseGrams, computed — never stored"
+                          },
+                          "daysAfterRoast": {
+                            "nullable": true,
+                            "description": "Whole days between roastDate and brewedAt, computed",
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "photoUrl": {
+                            "nullable": true,
+                            "description": "Authenticated route, not a public path",
+                            "type": "string"
+                          },
+                          "brewedAt": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "method",
+                          "methodOther",
+                          "beanName",
+                          "roaster",
+                          "roastDate",
+                          "grindSize",
+                          "doseGrams",
+                          "waterMl",
+                          "waterTempC",
+                          "brewTimeSeconds",
+                          "notes",
+                          "rating",
+                          "ratio",
+                          "daysAfterRoast",
+                          "photoUrl",
+                          "brewedAt",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Brew"
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Log a new brew",
+        "tags": [
+          "brews"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "New brew",
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "v60",
+                      "aeropress",
+                      "espresso",
+                      "chemex",
+                      "french_press",
+                      "moka",
+                      "cold_brew",
+                      "other"
+                    ]
+                  },
+                  "methodOther": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "beanName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roaster": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roastDate": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  },
+                  "grindSize": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "doseGrams": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 200
+                  },
+                  "waterMl": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5000
+                  },
+                  "waterTempC": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "brewTimeSeconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3600
+                  },
+                  "notes": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "brewedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "method",
+                  "beanName",
+                  "grindSize",
+                  "doseGrams",
+                  "waterMl",
+                  "waterTempC",
+                  "brewTimeSeconds",
+                  "rating"
+                ]
+              }
+            }
+          },
+          "description": "New brew"
+        },
+        "responses": {
+          "201": {
+            "description": "Brew",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roastDate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "rating": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "ratio": {
+                      "type": "number",
+                      "description": "waterMl / doseGrams, computed — never stored"
+                    },
+                    "daysAfterRoast": {
+                      "nullable": true,
+                      "description": "Whole days between roastDate and brewedAt, computed",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "photoUrl": {
+                      "nullable": true,
+                      "description": "Authenticated route, not a public path",
+                      "type": "string"
+                    },
+                    "brewedAt": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "roastDate",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "notes",
+                    "rating",
+                    "ratio",
+                    "daysAfterRoast",
+                    "photoUrl",
+                    "brewedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Brew"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brews/{id}": {
+      "get": {
+        "summary": "Read one brew",
+        "tags": [
+          "brews"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brew",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roastDate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "rating": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "ratio": {
+                      "type": "number",
+                      "description": "waterMl / doseGrams, computed — never stored"
+                    },
+                    "daysAfterRoast": {
+                      "nullable": true,
+                      "description": "Whole days between roastDate and brewedAt, computed",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "photoUrl": {
+                      "nullable": true,
+                      "description": "Authenticated route, not a public path",
+                      "type": "string"
+                    },
+                    "brewedAt": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "roastDate",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "notes",
+                    "rating",
+                    "ratio",
+                    "daysAfterRoast",
+                    "photoUrl",
+                    "brewedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Brew"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update some fields of a brew",
+        "tags": [
+          "brews"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "v60",
+                      "aeropress",
+                      "espresso",
+                      "chemex",
+                      "french_press",
+                      "moka",
+                      "cold_brew",
+                      "other"
+                    ]
+                  },
+                  "methodOther": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "beanName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roaster": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roastDate": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  },
+                  "grindSize": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "doseGrams": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 200
+                  },
+                  "waterMl": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5000
+                  },
+                  "waterTempC": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "brewTimeSeconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3600
+                  },
+                  "notes": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "brewedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "description": "Partial brew update"
+              }
+            }
+          },
+          "description": "Partial brew update"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brew",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roastDate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "rating": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "ratio": {
+                      "type": "number",
+                      "description": "waterMl / doseGrams, computed — never stored"
+                    },
+                    "daysAfterRoast": {
+                      "nullable": true,
+                      "description": "Whole days between roastDate and brewedAt, computed",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "photoUrl": {
+                      "nullable": true,
+                      "description": "Authenticated route, not a public path",
+                      "type": "string"
+                    },
+                    "brewedAt": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "roastDate",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "notes",
+                    "rating",
+                    "ratio",
+                    "daysAfterRoast",
+                    "photoUrl",
+                    "brewedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Brew"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a brew",
+        "tags": [
+          "brews"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brews/{id}/photo": {
+      "put": {
+        "summary": "Attach or replace the photo of a brew",
+        "tags": [
+          "photos"
+        ],
+        "description": "Multipart upload of a single image. Re-encoded to WebP with all metadata stripped; the original file is not kept.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brew",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roastDate": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "notes": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "rating": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "ratio": {
+                      "type": "number",
+                      "description": "waterMl / doseGrams, computed — never stored"
+                    },
+                    "daysAfterRoast": {
+                      "nullable": true,
+                      "description": "Whole days between roastDate and brewedAt, computed",
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "photoUrl": {
+                      "nullable": true,
+                      "description": "Authenticated route, not a public path",
+                      "type": "string"
+                    },
+                    "brewedAt": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "roastDate",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "notes",
+                    "rating",
+                    "ratio",
+                    "daysAfterRoast",
+                    "photoUrl",
+                    "brewedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Brew"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File larger than 5 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "File larger than 5 MB"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not a supported image format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not a supported image format"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Read the photo of a brew",
+        "tags": [
+          "photos"
+        ],
+        "description": "Served behind the session gate, so a leaked path does not leak the photo.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "WebP image bytes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "WebP image bytes"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove the photo of a brew",
+        "tags": [
+          "photos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes": {
+      "get": {
+        "summary": "List saved recipes",
+        "tags": [
+          "recipes"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "v60",
+                              "aeropress",
+                              "espresso",
+                              "chemex",
+                              "french_press",
+                              "moka",
+                              "cold_brew",
+                              "other"
+                            ]
+                          },
+                          "methodOther": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "beanName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "roaster": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "grindSize": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "doseGrams": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "waterMl": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "waterTempC": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "brewTimeSeconds": {
+                            "nullable": true,
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "method",
+                          "methodOther",
+                          "beanName",
+                          "roaster",
+                          "grindSize",
+                          "doseGrams",
+                          "waterMl",
+                          "waterTempC",
+                          "brewTimeSeconds",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Recipe"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Save a recipe",
+        "tags": [
+          "recipes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "v60",
+                      "aeropress",
+                      "espresso",
+                      "chemex",
+                      "french_press",
+                      "moka",
+                      "cold_brew",
+                      "other"
+                    ]
+                  },
+                  "methodOther": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "beanName": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roaster": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "grindSize": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "doseGrams": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 200
+                  },
+                  "waterMl": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5000
+                  },
+                  "waterTempC": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "brewTimeSeconds": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3600
+                  }
+                },
+                "required": [
+                  "name",
+                  "method"
+                ],
+                "description": "New recipe"
+              }
+            }
+          },
+          "description": "New recipe"
+        },
+        "responses": {
+          "201": {
+            "description": "Recipe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Recipe"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Name already taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Name already taken"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes/{id}": {
+      "get": {
+        "summary": "Read one recipe",
+        "tags": [
+          "recipes"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Recipe"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update a recipe",
+        "tags": [
+          "recipes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "v60",
+                      "aeropress",
+                      "espresso",
+                      "chemex",
+                      "french_press",
+                      "moka",
+                      "cold_brew",
+                      "other"
+                    ]
+                  },
+                  "methodOther": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "beanName": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roaster": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "grindSize": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "doseGrams": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 200
+                  },
+                  "waterMl": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5000
+                  },
+                  "waterTempC": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "brewTimeSeconds": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3600
+                  }
+                },
+                "description": "Partial recipe update"
+              }
+            }
+          },
+          "description": "Partial recipe update"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "v60",
+                        "aeropress",
+                        "espresso",
+                        "chemex",
+                        "french_press",
+                        "moka",
+                        "cold_brew",
+                        "other"
+                      ]
+                    },
+                    "methodOther": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "beanName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "roaster": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "grindSize": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "doseGrams": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "waterMl": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "waterTempC": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "brewTimeSeconds": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "method",
+                    "methodOther",
+                    "beanName",
+                    "roaster",
+                    "grindSize",
+                    "doseGrams",
+                    "waterMl",
+                    "waterTempC",
+                    "brewTimeSeconds",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Recipe"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a recipe",
+        "tags": [
+          "recipes"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "summary": "Aggregates for the statistics screen",
+        "tags": [
+          "stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregates for the statistics screen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ratingOverTime": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": {
+                            "type": "string",
+                            "description": "YYYY-MM"
+                          },
+                          "avgRating": {
+                            "type": "number"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "month",
+                          "avgRating",
+                          "count"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "ratingByRatio": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ratio": {
+                            "type": "number"
+                          },
+                          "rating": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "v60",
+                              "aeropress",
+                              "espresso",
+                              "chemex",
+                              "french_press",
+                              "moka",
+                              "cold_brew",
+                              "other"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "ratio",
+                          "rating",
+                          "method"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "methodDistribution": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "v60",
+                              "aeropress",
+                              "espresso",
+                              "chemex",
+                              "french_press",
+                              "moka",
+                              "cold_brew",
+                              "other"
+                            ]
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "count"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "topBeans": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "beanName": {
+                            "type": "string"
+                          },
+                          "avgRating": {
+                            "type": "number"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "beanName",
+                          "avgRating",
+                          "count"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "At most 5, and only beans with 2 or more brews"
+                    },
+                    "totalBrews": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Drives the \"not enough data yet\" state"
+                    }
+                  },
+                  "required": [
+                    "ratingOverTime",
+                    "ratingByRatio",
+                    "methodDistribution",
+                    "topBeans",
+                    "totalBrews"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Aggregates for the statistics screen"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/suggestions/beans": {
+      "get": {
+        "summary": "Previously used bean names",
+        "tags": [
+          "suggestions"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "in": "query",
+            "name": "q",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 10,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/suggestions/roasters": {
+      "get": {
+        "summary": "Previously used roasters",
+        "tags": [
+          "suggestions"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "in": "query",
+            "name": "q",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 10,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Password gate"
+    },
+    {
+      "name": "brews",
+      "description": "Brew entries"
+    },
+    {
+      "name": "photos",
+      "description": "One photo per brew"
+    },
+    {
+      "name": "recipes",
+      "description": "Brew templates"
+    },
+    {
+      "name": "stats",
+      "description": "Aggregates for the statistics screen"
+    },
+    {
+      "name": "suggestions",
+      "description": "Autocomplete over previously entered values"
+    },
+    {
+      "name": "operational",
+      "description": "Health probes"
+    }
+  ]
+}
