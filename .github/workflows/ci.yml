@@ -81,3 +81,29 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
+
+      # A built image proves it compiles, not that it runs. These are different failures:
+      # a corrupted secret, a missing native binding or a misconfigured static root all
+      # produce an image that builds perfectly and serves nothing.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Run the image and smoke test it
+        env:
+          SMOKE_PASSWORD: smoke-test-only-passphrase
+        run: |
+          HASH=$(docker run --rm -e P="$SMOKE_PASSWORD" brewlog:ci \
+            node -e "import('@node-rs/argon2').then(a=>a.hash(process.env.P,{memoryCost:19456,timeCost:2,parallelism:1})).then(h=>console.log(h))")
+          docker run -d --name smoke -p 3000:3000 \
+            -e AUTH_PASSWORD_HASH="$HASH" \
+            -e SESSION_SECRET="$(openssl rand -hex 32)" \
+            -e SWAGGER_USER=ci -e SWAGGER_PASSWORD=ci \
+            brewlog:ci
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:3000/ready >/dev/null 2>&1 && break
+            sleep 2
+          done
+          SWAGGER_USER=ci SWAGGER_PASSWORD=ci npm run smoke
+          docker logs smoke
+          docker rm -f smoke

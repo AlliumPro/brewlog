@@ -119,9 +119,13 @@ export default tseslint.config(
     },
   },
 
-  // Root tooling configs: no type information available, Node globals.
+  // Root tooling and scripts: no type information available, Node globals.
   {
-    files: ['*.js', '*.ts'],
+    files: ['*.js', '*.ts', 'scripts/**/*.js'],
+    rules: {
+      // These are CLI scripts; stdout is how they report.
+      'no-console': 'off',
+    },
     extends: [tseslint.configs.recommended],
     languageOptions: { globals: globals.node },
   },

@@ -33,6 +33,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "cypress run",
     "verify": "run-s typecheck lint test build",
+    "smoke": "node --env-file-if-exists=.env scripts/smoke.js",
     "db:generate": "npm run db:generate --workspace @brewlog/api",
     "db:migrate": "npm run db:migrate --workspace @brewlog/api",
     "openapi:export": "npm run openapi:export --workspace @brewlog/api",

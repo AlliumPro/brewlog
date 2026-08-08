@@ -67,6 +67,16 @@ npm run fix          # apply the autofixable part of the above
 npm run test         # vitest run
 npm run test:e2e     # cypress run — needs both apps running, see below
 npm run verify       # typecheck + lint + test + build; the gate before every commit
+npm run smoke        # checks a running instance — see below
+```
+
+`verify` compiles, lints and runs tests in memory. It never starts the app, so it cannot tell you
+whether the container's environment, static files or native modules are right. That is what
+`smoke` is for, and every check in it stands for a bug that once shipped past a green `verify`:
+
+```bash
+docker compose up -d --build
+SMOKE_PASSWORD='your passphrase here' npm run smoke
 ```
 
 Backend-specific:
