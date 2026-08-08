@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { resolve } from 'node:path';
 
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { count } from 'drizzle-orm';
 import Fastify from 'fastify';
 import type { FastifyBaseLogger, FastifyError, FastifyInstance, RawServerDefault } from 'fastify';
@@ -100,9 +102,29 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
     });
   });
 
-  app.setNotFoundHandler((_request, reply) =>
-    reply.status(404).send({ error: { code: 'not_found', message: 'Resource not found' } }),
-  );
+  /**
+   * In the container the API also serves the built SPA. A client-side route such as
+   * /brews/abc is not a file, so anything that is not an API path falls back to index.html
+   * and React Router takes over. API paths keep answering with the JSON envelope, because a
+   * fetch that silently receives HTML is far harder to debug than a 404.
+   */
+  if (env.STATIC_DIR !== undefined) {
+    await app.register(fastifyStatic, { root: resolve(env.STATIC_DIR), index: false });
+  }
+
+  app.setNotFoundHandler((request, reply) => {
+    const isApiPath =
+      request.url.startsWith('/api') ||
+      request.url.startsWith('/health') ||
+      request.url.startsWith('/ready') ||
+      request.url.startsWith('/docs');
+
+    if (env.STATIC_DIR !== undefined && request.method === 'GET' && !isApiPath) {
+      return reply.sendFile('index.html');
+    }
+
+    return reply.status(404).send({ error: { code: 'not_found', message: 'Resource not found' } });
+  });
 
   // Dependency graph, wired once. Repositories talk SQL, services own the rules.
   const brewRepository = createBrewRepository(db);

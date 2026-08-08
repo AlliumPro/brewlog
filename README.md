@@ -1,51 +1,122 @@
 # BrewLog
 
-A personal specialty coffee brewing journal: record the parameters of every brew, rate the result,
-and look back to see which parameters reliably produce a better cup.
+A personal specialty coffee brewing journal. Record the parameters of a brew — method, bean,
+grind, dose, water, temperature, time — rate the result, and look back later to see which
+parameters reliably produce a better cup.
 
-Single user, protected by one site-wide password. Not a social product.
+One user, one password, no accounts. Not a social product and not a tracker: a quiet notebook
+that happens to do arithmetic.
 
-## Status
+## Requirements
 
-Under construction. See [SPEC.md](SPEC.md) for the agreed scope and
-[docs/adr/0001-stack.md](docs/adr/0001-stack.md) for the stack decisions.
+- Node 22.12 or newer (`.nvmrc` pins the major)
+- Docker, if you want to run the production-shaped stack
 
-## Layout
-
-```
-apps/api/   Fastify + Zod + Drizzle (SQLite). Zod schemas generate OpenAPI.
-apps/web/   Vite + React + TypeScript, Feature-Sliced Design, CSS Modules.
-```
-
-## Local development
-
-Requires Node 22.12 or newer.
+## Getting started
 
 ```bash
 npm install
-cp .env.example .env    # then fill in the values
-npm run dev             # api on :3000, web on :5173
+cp .env.example .env
 ```
+
+Fill in `.env`. Two values need generating:
+
+```bash
+# the password that opens the journal — 12 characters minimum, a passphrase works best
+printf '%s' 'your passphrase here' | npm run auth:hash --workspace @brewlog/api
+
+# the key that signs the session cookie
+openssl rand -hex 32
+```
+
+Then apply the migrations and start both apps:
+
+```bash
+npm run db:migrate
+npm run dev        # API on :3000, web on :5173
+```
+
+Open http://localhost:5173. The Vite dev server proxies `/api` to the API, so there is no CORS
+setup to think about.
+
+## Running the container
+
+```bash
+docker compose up -d --build
+```
+
+The image serves the API and the built SPA from one process on http://localhost:3000. It binds
+to the loopback interface on purpose: there is no TLS in front of it yet, so it must not listen
+on a public address.
 
 ## Commands
 
 ```bash
-npm run dev         # both apps in watch mode
-npm run build       # production build of both apps
-npm run typecheck   # tsc --noEmit across the workspaces
-npm run lint        # eslint + steiger (FSD boundaries) + stylelint + prettier check
-npm run fix         # apply the autofixable part of the above
-npm run test        # vitest run
-npm run test:e2e    # cypress run
-npm run verify      # typecheck + lint + test + build — the gate before every commit
+npm run dev          # both apps in watch mode
+npm run build        # production build of both
+npm run typecheck    # tsc --noEmit across the workspaces and the e2e specs
+npm run lint         # eslint + steiger (FSD boundaries) + stylelint + prettier
+npm run fix          # apply the autofixable part of the above
+npm run test         # vitest run
+npm run test:e2e     # cypress run — needs both apps running, see below
+npm run verify       # typecheck + lint + test + build; the gate before every commit
+```
+
+Backend-specific:
+
+```bash
+npm run db:generate      # generate a migration from a schema change
+npm run db:migrate       # apply migrations
+npm run openapi:export   # regenerate apps/api/openapi.json from the Zod schemas
+npm run gen:api          # regenerate the client's types from openapi.json
+```
+
+`openapi.json` and the generated client types are committed, and CI fails if either has drifted
+from the code. Neither is ever edited by hand.
+
+The end-to-end suite needs the app running and the password it should use:
+
+```bash
+npm run dev
+CYPRESS_BREWLOG_PASSWORD='your passphrase here' npm run test:e2e
 ```
 
 ## Environment
 
-See [.env.example](.env.example) for the full list. No real value belongs in git: the example file
-carries empty placeholders only.
+Every variable is listed in [.env.example](.env.example) with an empty value. Nothing real goes
+into git.
+
+| Variable                           | Purpose                                                        |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`                     | Path to the SQLite file                                        |
+| `AUTH_PASSWORD_HASH`               | argon2id hash of the site password, from `npm run auth:hash`   |
+| `SESSION_SECRET`                   | Signs the session cookie; 32 bytes or more                     |
+| `UPLOAD_DIR`                       | Where photos are written                                       |
+| `STATIC_DIR`                       | Built SPA to serve; set in the container, unset in development |
+| `SWAGGER_USER`, `SWAGGER_PASSWORD` | Basic auth for `/docs`; required outside development           |
+| `VITE_API_URL`                     | API base for the frontend. Public — it ships in the bundle     |
+
+The app refuses to start if a required variable is missing or too weak, and reports the variable
+names without their values.
+
+## Stack
+
+Vite + React 19 + TypeScript strict, Feature-Sliced Design, CSS Modules over `radix-ui`
+primitives, Recharts. Fastify + Zod + Drizzle over SQLite on the server, with `openapi.json`
+generated from the same schemas that validate requests. The reasoning, including where this
+deviates from the house defaults and why, is in [docs/adr/0001-stack.md](docs/adr/0001-stack.md).
 
 ## Documentation
 
 - [SPEC.md](SPEC.md) — scope, screens, data model, API contract, acceptance criteria
-- [docs/adr/](docs/adr/) — architecture decisions and their reasons
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how a request flows and where types come from
+- [docs/SECURITY.md](docs/SECURITY.md) — the security review, its findings and its accepted gaps
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — health checks, backups, rollback, destructive commands
+- [docs/adr/](docs/adr/) — architecture decisions
+- [CHANGELOG.md](CHANGELOG.md) — what shipped, and what is knowingly missing
+
+## Status
+
+Version 0.1.0 runs locally. Deployment to a server, TLS, metrics and alerting are not done —
+there is no server yet. The runbook says plainly which parts of the production posture are
+written but unproven.

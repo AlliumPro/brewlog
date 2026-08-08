@@ -1,0 +1,53 @@
+# Production-shaped stack. Runs locally today; the only thing phase 7 adds is a reverse proxy
+# with TLS in front of it.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: brewlog:local
+    restart: unless-stopped
+    # Bound to the loopback interface: without TLS in front, this must not listen on a public
+    # address. Phase 7 replaces this with a proxy that terminates HTTPS.
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: /data/brewlog.db
+      UPLOAD_DIR: /data/uploads
+      STATIC_DIR: /app/public
+      # No defaults on purpose: the app refuses to start rather than run half-configured.
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?set it in .env, see README}
+      SESSION_SECRET: ${SESSION_SECRET:?set it in .env, see README}
+      SWAGGER_USER: ${SWAGGER_USER:?set it in .env, see README}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:?set it in .env, see README}
+    volumes:
+      - brewlog-data:/data
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+volumes:
+  # The database and the photos live here. This is the only thing worth backing up.
+  brewlog-data:

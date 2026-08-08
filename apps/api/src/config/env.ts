@@ -11,6 +11,11 @@ const envSchema = z
     AUTH_PASSWORD_HASH: z.string().min(1),
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
     UPLOAD_DIR: z.string().min(1),
+    /**
+     * Directory holding the built SPA. Set in the container, absent in development where Vite
+     * serves the frontend on its own port.
+     */
+    STATIC_DIR: z.string().min(1).optional(),
     SWAGGER_USER: z.string().min(1).optional(),
     SWAGGER_PASSWORD: z.string().min(1).optional(),
   })

@@ -1,0 +1,30 @@
+# Development stack: the API in a container with the source mounted, so migrations and native
+# modules behave exactly as they will in production while the code stays editable.
+#
+# The frontend is not here on purpose — Vite's dev server with hot reload is better than any
+# container arrangement. Run it on the host with `npm run dev:web`.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: npm run dev --workspace @brewlog/api
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      LOG_LEVEL: debug
+      DATABASE_URL: /data/brewlog.db
+      UPLOAD_DIR: /data/uploads
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?set it in .env, see README}
+      SESSION_SECRET: ${SESSION_SECRET:?set it in .env, see README}
+    volumes:
+      - ./apps/api/src:/app/apps/api/src:ro
+      - ./apps/api/drizzle:/app/apps/api/drizzle:ro
+      - brewlog-dev-data:/data
+
+volumes:
+  brewlog-dev-data:
