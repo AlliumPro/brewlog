@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+data/
+uploads/
+apps/web/src/shared/api/generated.ts
+apps/api/openapi.json
+apps/api/drizzle/
+package-lock.json

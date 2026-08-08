@@ -1,0 +1,48 @@
+.page {
+  max-width: var(--layout-max-width);
+  padding: var(--space-8) var(--space-4) var(--space-16);
+  margin-inline: auto;
+}
+
+.header {
+  margin-bottom: var(--space-12);
+}
+
+.title {
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin-top: var(--space-2);
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+}
+
+.empty {
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.emptyText {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+}
+
+.emptyHint {
+  margin-top: var(--space-2);
+  color: var(--color-text-faint);
+}
+
+@media (width >= 48rem) {
+  .page {
+    padding-inline: var(--space-8);
+  }
+
+  .title {
+    font-size: var(--text-hero);
+  }
+}

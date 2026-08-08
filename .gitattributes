@@ -1,0 +1,15 @@
+# The repository stores and checks out LF everywhere. The app is built and run in Linux
+# containers, where CRLF in a shell script or a hook is a runtime failure.
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff2 binary
+
+# Generated and noisy in diffs
+package-lock.json -diff linguist-generated

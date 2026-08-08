@@ -1,0 +1,62 @@
+{
+  "name": "brewlog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal specialty coffee brewing journal",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "run-p dev:api dev:web",
+    "dev:api": "npm run dev --workspace @brewlog/api",
+    "dev:web": "npm run dev --workspace @brewlog/web",
+    "build": "run-s build:api build:web",
+    "build:api": "npm run build --workspace @brewlog/api",
+    "build:web": "npm run build --workspace @brewlog/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "run-s lint:es lint:fsd lint:css lint:format",
+    "lint:es": "eslint . --max-warnings 0",
+    "lint:fsd": "steiger ./apps/web/src",
+    "lint:css": "stylelint \"apps/web/src/**/*.css\" --allow-empty-input",
+    "lint:format": "prettier --check .",
+    "fix": "run-s fix:es fix:css fix:format",
+    "fix:es": "eslint . --fix",
+    "fix:css": "stylelint \"apps/web/src/**/*.css\" --fix --allow-empty-input",
+    "fix:format": "prettier --write .",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "cypress run",
+    "verify": "run-s typecheck lint test build",
+    "db:generate": "npm run db:generate --workspace @brewlog/api",
+    "db:migrate": "npm run db:migrate --workspace @brewlog/api",
+    "openapi:export": "npm run openapi:export --workspace @brewlog/api",
+    "gen:api": "npm run gen:api --workspace @brewlog/web",
+    "prepare": "husky"
+  },
+  "overrides": {
+    "js-yaml": "4.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@feature-sliced/steiger-plugin": "0.7.0",
+    "cypress": "15.20.0",
+    "eslint": "10.8.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.9.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.3.0",
+    "npm-run-all2": "9.0.3",
+    "prettier": "3.9.6",
+    "steiger": "0.6.0",
+    "stylelint": "17.14.1",
+    "stylelint-config-css-modules": "4.6.0",
+    "stylelint-config-recess-order": "7.7.0",
+    "stylelint-config-standard": "40.0.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.66.0"
+  }
+}

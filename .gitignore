@@ -1,0 +1,39 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+apps/api/dist/
+apps/web/dist/
+
+# Database and uploads (runtime data, never in git)
+*.db
+*.db-shm
+*.db-wal
+data/
+uploads/
+
+# Test and tooling artefacts
+coverage/
+.vitest/
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+*.tsbuildinfo
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
