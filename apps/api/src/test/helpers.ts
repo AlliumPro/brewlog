@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -22,8 +22,21 @@ export interface TestContext {
  * A fresh in-memory database and a throwaway upload directory per suite, so tests cannot
  * see each other's data and the rate limiter starts from zero in each file.
  */
-export async function createTestApp(): Promise<TestContext> {
+export async function createTestApp(options: { withStatic?: boolean } = {}): Promise<TestContext> {
   const uploadDir = await mkdtemp(join(tmpdir(), 'brewlog-test-'));
+
+  // A stand-in for apps/web/dist, so the static-serving behaviour can be tested without
+  // building the frontend first.
+  let staticDir: string | undefined;
+
+  if (options.withStatic === true) {
+    staticDir = await mkdtemp(join(tmpdir(), 'brewlog-static-'));
+    await writeFile(
+      join(staticDir, 'index.html'),
+      '<!doctype html><html><body><div id="root"></div></body></html>',
+      'utf8',
+    );
+  }
   const passwordHash = await hash(TEST_PASSWORD, {
     memoryCost: 19_456,
     timeCost: 2,
@@ -37,6 +50,7 @@ export async function createTestApp(): Promise<TestContext> {
     AUTH_PASSWORD_HASH: passwordHash,
     UPLOAD_DIR: uploadDir,
     LOG_LEVEL: 'silent',
+    ...(staticDir === undefined ? {} : { STATIC_DIR: staticDir }),
   });
 
   const db = createDb(env.DATABASE_URL);
@@ -51,6 +65,10 @@ export async function createTestApp(): Promise<TestContext> {
     async close() {
       await app.close();
       await rm(uploadDir, { recursive: true, force: true });
+
+      if (staticDir !== undefined) {
+        await rm(staticDir, { recursive: true, force: true });
+      }
     },
   };
 }

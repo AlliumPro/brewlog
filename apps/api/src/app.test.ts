@@ -84,6 +84,53 @@ describe('app', () => {
   });
 });
 
+describe('serving the built SPA', () => {
+  let context: TestContext;
+
+  beforeAll(async () => {
+    context = await createTestApp({ withStatic: true });
+  });
+
+  afterAll(async () => {
+    await context.close();
+  });
+
+  it('serves index.html at the root', async () => {
+    // Regression: with `index: false` the plugin treated "/" as a directory listing and
+    // answered 403, so the front page was the one URL that did not work.
+    const response = await context.app.inject({ method: 'GET', url: '/' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('<div id="root">');
+  });
+
+  it('falls back to index.html for a client-side route', async () => {
+    const response = await context.app.inject({ method: 'GET', url: '/brews/whatever' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('<div id="root">');
+  });
+
+  it('still answers unknown API paths with the JSON envelope, not HTML', async () => {
+    // An unmatched /api path never reaches the scoped auth hook, so it is a 404 rather than
+    // a 401 — but it must stay JSON. A fetch that silently receives an HTML page is far
+    // harder to debug than a 404.
+    const response = await context.app.inject({ method: 'GET', url: '/api/nope' });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.headers['content-type']).toContain('application/json');
+    expect(response.json()).toEqual({
+      error: { code: 'not_found', message: 'Resource not found' },
+    });
+  });
+
+  it('keeps a real API route behind the session gate', async () => {
+    const response = await context.app.inject({ method: 'GET', url: '/api/brews' });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
 describe('loadEnv', () => {
   it('rejects a short session secret without echoing the value', () => {
     expect(() => loadEnv({ ...process.env, SESSION_SECRET: 'too-short' })).toThrow(

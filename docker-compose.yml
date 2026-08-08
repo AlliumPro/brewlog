@@ -11,18 +11,22 @@ services:
     # address. Phase 7 replaces this with a proxy that terminates HTTPS.
     ports:
       - '127.0.0.1:3000:3000'
+    # env_file rather than `environment: KEY: ${KEY}`, and this was found by running it: compose
+    # interpolates `$` inside interpolated values, and an argon2 hash is `$argon2id$v=19$m=…`.
+    # The hash arrived mangled and every login failed, while the health check stayed green
+    # because /ready knows nothing about passwords. env_file passes values through literally.
+    #
+    # The app validates these itself and refuses to start when one is missing, so nothing is
+    # lost by dropping the `:?` guards that used to live here.
+    env_file:
+      - path: .env
+        format: raw
     environment:
       NODE_ENV: production
       PORT: 3000
-      LOG_LEVEL: ${LOG_LEVEL:-info}
       DATABASE_URL: /data/brewlog.db
       UPLOAD_DIR: /data/uploads
       STATIC_DIR: /app/public
-      # No defaults on purpose: the app refuses to start rather than run half-configured.
-      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?set it in .env, see README}
-      SESSION_SECRET: ${SESSION_SECRET:?set it in .env, see README}
-      SWAGGER_USER: ${SWAGGER_USER:?set it in .env, see README}
-      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:?set it in .env, see README}
     volumes:
       - brewlog-data:/data
     healthcheck:

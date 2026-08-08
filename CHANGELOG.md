@@ -8,8 +8,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 - Deployment to a VPS, a domain and TLS (pipeline phase 7)
 - Metrics, log aggregation and alerting (pipeline phase 8)
-- The Docker image is written but has not been built on this machine — the Docker daemon was
-  not running during the build phase
 
 ## [0.1.0] — 2026-08-08
 
@@ -47,6 +45,26 @@ First working version: log a brew, browse the history, see what the numbers say.
 - Logs redact cookies, authorisation headers and request bodies, so tasting notes never reach
   them.
 - Full review recorded in [docs/SECURITY.md](docs/SECURITY.md).
+
+### Fixed while building the container
+
+The image was built and run before this version was called done, which turned up five faults
+that no amount of reading would have found:
+
+- `npm ci` refused the lockfile inside the image: Node 22 ships npm 10, and this lockfile is
+  written by npm 11. The npm version is now pinned in the Dockerfile and both workflows — CI
+  would have hit exactly the same wall.
+- better-sqlite3 v13 publishes no prebuilt binary and has no install script, so npm runs
+  node-gyp on its `binding.gyp`. Python and a compiler now live in the builder stage only.
+- The lockfile, generated on Windows, listed only the Windows binaries for Rolldown,
+  lightningcss and argon2. `npm ci` installs exactly the lockfile, so the Linux ones were
+  absent — the first two broke the build, and argon2 would have broken login at runtime. The
+  Linux binaries are now declared explicitly.
+- Compose interpolated the `$` characters in the argon2 hash and passed a corrupted value into
+  the container, so every login failed while the health check stayed green. The env file is
+  now read in raw mode.
+- `GET /` answered 403: the static plugin treated the root as a directory listing. The site's
+  front page was the one URL that did not work. Covered by a test now.
 
 ### Known limitations
 

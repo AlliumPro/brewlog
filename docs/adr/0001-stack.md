@@ -96,3 +96,9 @@ scratch.
   mostly mechanical.
 - Deferring phases 7–8 means the production posture (TLS, metrics, alerting) is unverified until a
   server exists. The runbook must state this plainly rather than imply the project is production-run.
+- Three of the chosen dependencies ship a separate binary per platform (Rolldown inside Vite,
+  lightningcss, argon2), and npm records only the current platform's binary in a lockfile
+  generated on Windows. Because `npm ci` installs exactly the lockfile, the Linux ones must be
+  declared as explicit `optionalDependencies` or the container fails to build — and, in argon2's
+  case, fails at login rather than at build. Their versions have to move together with their
+  parent package. This is npm/cli#4828, not something any of these libraries can fix.

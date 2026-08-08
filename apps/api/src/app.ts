@@ -109,7 +109,12 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
    * fetch that silently receives HTML is far harder to debug than a 404.
    */
   if (env.STATIC_DIR !== undefined) {
-    await app.register(fastifyStatic, { root: resolve(env.STATIC_DIR), index: false });
+    await app.register(fastifyStatic, {
+      root: resolve(env.STATIC_DIR),
+      // `index: false` makes a request for "/" a directory listing request, which the plugin
+      // refuses with 403 — so the site's front page was the one URL that did not work.
+      index: ['index.html'],
+    });
   }
 
   app.setNotFoundHandler((request, reply) => {

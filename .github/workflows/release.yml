@@ -26,6 +26,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # Same pin as the Dockerfile and ci.yml: npm 10 cannot read this lockfile.
+      - run: npm install -g npm@11.6.2
+
       - run: npm ci
 
       # A tag must never publish something that does not pass the gate.

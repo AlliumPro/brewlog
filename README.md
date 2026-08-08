@@ -10,6 +10,8 @@ that happens to do arithmetic.
 ## Requirements
 
 - Node 22.12 or newer (`.nvmrc` pins the major)
+- npm 11 or newer. Node 22 still ships npm 10, which refuses to read this lockfile in `npm ci`
+  mode; `npm install -g npm@11.6.2` if `npm -v` says otherwise
 - Docker, if you want to run the production-shaped stack
 
 ## Getting started
@@ -98,6 +100,12 @@ into git.
 
 The app refuses to start if a required variable is missing or too weak, and reports the variable
 names without their values.
+
+**One trap worth knowing.** `AUTH_PASSWORD_HASH` contains `$` characters — `$argon2id$v=19$m=…`.
+Compose would read those as variable references and hand the container a truncated hash, at which
+point every login fails while `/ready` stays green. `docker-compose.yml` therefore reads the env
+file in raw mode. If you copy the hash into any other tool — a CI secret, a server's env file —
+check how that tool treats `$` before trusting it.
 
 ## Stack
 

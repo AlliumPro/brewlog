@@ -26,6 +26,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # setup-node ships npm 10 with Node 22; the lockfile is written by npm 11, which npm 10
+      # refuses to read in `ci` mode. Same pin as the Dockerfile.
+      - run: npm install -g npm@11.6.2
+
       # ci, not install: the lockfile is the contract, and a drifting tree is a failure.
       - run: npm ci
 

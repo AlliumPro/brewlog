@@ -1,37 +1,50 @@
 # syntax=docker/dockerfile:1
 
 # ---- builder -------------------------------------------------------------------------------
-# Alpine in both stages on purpose: better-sqlite3, sharp and argon2 resolve musl prebuilds at
-# install time, so the binaries compiled here are the ones that run in the final image.
-FROM node:22-alpine AS builder
+# Debian slim rather than alpine: sharp downloads a ready glibc binary, and the C++ compiled
+# here links against the same libc as the runtime stage.
+FROM node:22-slim AS builder
+
+# better-sqlite3 v13 publishes no prebuilt binaries and has no install script, so npm sees its
+# binding.gyp and runs node-gyp itself. That needs Python and a compiler. They live in this
+# stage only — the runtime image receives the compiled .node file, not the toolchain.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# node:22 ships npm 10, which reads a lockfile written by npm 11 strictly enough to refuse it
+# ("Missing: typescript@5.9.3 from lock file"). Pinning the package manager keeps the local
+# machine, CI and this image on the same resolver instead of finding out at build time.
+RUN npm install -g npm@11.6.2
 
 # Copy manifests first so the dependency layer is reused whenever only source files change.
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 
-# `npm ci` installs exactly what the lockfile says; the prepare script would try to install
-# husky, which has no business in an image.
-RUN npm ci --ignore-scripts
+# Install scripts stay enabled on purpose: that is the step where better-sqlite3 and sharp
+# fetch their prebuilt binaries. HUSKY=0 keeps the prepare script from installing git hooks,
+# which have no business in an image.
+ENV HUSKY=0
+RUN npm ci
 
 COPY . .
-
-# Native modules skipped their install scripts above, so build them explicitly.
-RUN npm rebuild better-sqlite3 sharp
 
 RUN npm run build --workspace @brewlog/api \
   && npm run build --workspace @brewlog/web
 
-# Drop dev dependencies from node_modules before they can be copied into the runtime image.
+# Drop dev dependencies before they can be copied into the runtime image.
 RUN npm prune --omit=dev
 
 # ---- runtime -------------------------------------------------------------------------------
-FROM node:22-alpine AS runtime
+FROM node:22-slim AS runtime
 
 # dumb-init reaps zombies and forwards signals, so SIGTERM actually reaches Node.
-RUN apk add --no-cache dumb-init
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends dumb-init \
+  && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -43,13 +56,12 @@ WORKDIR /app
 
 # `node` is an unprivileged user that ships with the image; nothing here runs as root.
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=node:node /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder --chown=node:node /app/apps/web/dist ./public
 
-# The volume mount point must exist and belong to the runtime user before the volume is bound.
+# The mount point must exist and belong to the runtime user before the volume is bound.
 RUN mkdir -p /data/uploads && chown -R node:node /data
 
 USER node

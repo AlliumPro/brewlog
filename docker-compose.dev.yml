@@ -13,14 +13,17 @@ services:
     restart: unless-stopped
     ports:
       - '127.0.0.1:3000:3000'
+    # See the note in docker-compose.yml: an argon2 hash contains `$`, which compose would
+    # otherwise treat as variable references and silently corrupt.
+    env_file:
+      - path: .env
+        format: raw
     environment:
       NODE_ENV: development
       PORT: 3000
       LOG_LEVEL: debug
       DATABASE_URL: /data/brewlog.db
       UPLOAD_DIR: /data/uploads
-      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?set it in .env, see README}
-      SESSION_SECRET: ${SESSION_SECRET:?set it in .env, see README}
     volumes:
       - ./apps/api/src:/app/apps/api/src:ro
       - ./apps/api/drizzle:/app/apps/api/drizzle:ro
