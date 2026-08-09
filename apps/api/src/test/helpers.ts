@@ -12,6 +12,9 @@ import { runMigrations } from '../db/migrate.js';
 
 export const TEST_PASSWORD = 'a stubbornly long test password';
 
+/** Stands in for the theme applier that the real index.html carries. */
+export const TEST_INLINE_SCRIPT = 'document.documentElement.dataset.theme = "dark";';
+
 export interface TestContext {
   app: App;
   uploadDir: string;
@@ -31,9 +34,12 @@ export async function createTestApp(options: { withStatic?: boolean } = {}): Pro
 
   if (options.withStatic === true) {
     staticDir = await mkdtemp(join(tmpdir(), 'brewlog-static-'));
+    // The inline script mirrors the real page: the theme applier has to run before first
+    // paint, so the CSP has to carry its hash.
     await writeFile(
       join(staticDir, 'index.html'),
-      '<!doctype html><html><body><div id="root"></div></body></html>',
+      `<!doctype html><html><head><script>${TEST_INLINE_SCRIPT}</script></head>` +
+        '<body><div id="root"></div></body></html>',
       'utf8',
     );
   }

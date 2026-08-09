@@ -39,7 +39,8 @@
     "db:migrate": "npm run db:migrate --workspace @brewlog/api",
     "openapi:export": "npm run openapi:export --workspace @brewlog/api",
     "gen:api": "npm run gen:api --workspace @brewlog/web",
-    "prepare": "husky"
+    "prepare": "husky",
+    "icons": "node scripts/icons.js"
   },
   "overrides": {
     "js-yaml": "4.3.1"
