@@ -42,9 +42,15 @@ RUN npm prune --omit=dev
 FROM node:22-slim AS runtime
 
 # dumb-init reaps zombies and forwards signals, so SIGTERM actually reaches Node.
+#
+# npm is removed in the same layer: the container runs `node dist/index.js` and never needs a
+# package manager. Its bundled dependencies (tar, sigstore, brace-expansion) were the entire
+# "Node.js (node-pkg)" section of the image scan — vulnerabilities in tooling that does not
+# run here at all.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends dumb-init \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 ENV NODE_ENV=production \
     PORT=3000 \

@@ -43,9 +43,6 @@
   "overrides": {
     "js-yaml": "4.3.1"
   },
-  "optionalDependencies": {
-    "@esbuild/linux-x64": "0.18.20"
-  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@feature-sliced/steiger-plugin": "0.7.0",
