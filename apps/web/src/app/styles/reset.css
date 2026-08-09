@@ -79,6 +79,32 @@ select {
 }
 
 /**
+ * Safari gives a date field the intrinsic width of its native control and will not shrink it,
+ * so on a narrow screen it pushes a little past the container while every other field fits.
+ *
+ * `appearance: none` drops that native sizing. The unprefixed property is enough: SPEC.md
+ * commits to iOS Safari 16 and up, and Safari has supported it unprefixed since 15.4.
+ */
+input[type='date'] {
+  width: 100%;
+  appearance: none;
+}
+
+/**
+ * Safari also centres the value inside the field and sizes the field to it. Left-aligning it
+ * and dropping the inherited margin removes the last few pixels.
+ */
+input[type='date']::-webkit-date-and-time-value {
+  margin: 0;
+  text-align: start;
+}
+
+/* Keeps the calendar button at the trailing edge once the value no longer fills the field */
+input[type='date']::-webkit-calendar-picker-indicator {
+  margin-inline-start: auto;
+}
+
+/**
  * A fieldset defaults to min-inline-size: min-content, which no other element does. Inside a
  * column layout that makes the whole group as wide as its widest child and immovable — the
  * single largest cause of horizontal overflow in forms.

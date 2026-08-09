@@ -73,6 +73,48 @@ describe('BrewForm', () => {
     });
   });
 
+  it('takes brew time as minutes and seconds, not as text with a colon', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    renderWithProviders(<BrewForm submitLabel="Save" onSubmit={onSubmit} />);
+
+    // A numeric keypad has no colon, so a combined mm:ss field cannot be filled on a phone.
+    const minutes = screen.getByLabelText('Brew time, min');
+    const seconds = screen.getByLabelText('Brew time, sec');
+
+    await user.clear(minutes);
+    await user.type(minutes, '3');
+    await user.clear(seconds);
+    await user.type(seconds, '15');
+
+    await user.type(screen.getByLabelText('Bean'), 'Kieni AA');
+    await user.type(screen.getByLabelText('Grind'), 'medium');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ brewTimeSeconds: 195 });
+  });
+
+  it('refuses a brew that takes no time at all', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    renderWithProviders(<BrewForm submitLabel="Save" onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText('Bean'), 'Kieni AA');
+    await user.type(screen.getByLabelText('Grind'), 'medium');
+    await user.clear(screen.getByLabelText('Brew time, min'));
+    await user.type(screen.getByLabelText('Brew time, min'), '0');
+    await user.clear(screen.getByLabelText('Brew time, sec'));
+    await user.type(screen.getByLabelText('Brew time, sec'), '0');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('A brew takes longer than nothing')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('leaves TDS empty rather than recording zero when nothing was measured', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

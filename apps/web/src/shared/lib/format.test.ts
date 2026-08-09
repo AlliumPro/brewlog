@@ -7,7 +7,6 @@ import {
   formatDaysAfterRoast,
   formatDose,
   formatRatio,
-  parseBrewTime,
 } from './format';
 
 describe('formatRatio', () => {
@@ -22,17 +21,6 @@ describe('brew time', () => {
     expect(formatBrewTime(165)).toBe('2:45');
     expect(formatBrewTime(65)).toBe('1:05');
     expect(formatBrewTime(600)).toBe('10:00');
-  });
-
-  it('parses mm:ss back to seconds', () => {
-    expect(parseBrewTime('2:45')).toBe(165);
-    expect(parseBrewTime(' 1:05 ')).toBe(65);
-  });
-
-  it('rejects input that is not a time', () => {
-    expect(parseBrewTime('165')).toBeNull();
-    expect(parseBrewTime('2:75')).toBeNull();
-    expect(parseBrewTime('')).toBeNull();
   });
 });
 

@@ -43,6 +43,31 @@ describe('layout on a narrow screen', () => {
     });
   }
 
+  it('keeps the date field inside its container', () => {
+    // Safari sizes a date input from its native control and refuses to shrink it, so this one
+    // field used to run past the edge while the rest of the form fitted. Electron will not
+    // reproduce that on its own — the check is here to catch the layout regression that the
+    // fix could introduce anywhere else.
+    cy.visit('/brews/new');
+    cy.contains('label', 'Roast date')
+      .parent()
+      .then(($field) => {
+        const field = $field.get(0);
+        const input = $field.find('input').get(0);
+
+        if (field === undefined || input === undefined) {
+          throw new Error('expected the roast date field and its input');
+        }
+
+        expect(
+          input.getBoundingClientRect().width,
+          'date input is no wider than its field',
+        ).to.be.at.most(field.getBoundingClientRect().width + 1);
+      });
+
+    expectNoHorizontalOverflow();
+  });
+
   it('keeps the form inside the viewport while a select is open', () => {
     // Radix locks scrolling when the list opens, which removes the scrollbar. Without a
     // reserved gutter every centred block jumps sideways at that moment.

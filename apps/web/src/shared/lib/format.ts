@@ -13,23 +13,6 @@ export function formatBrewTime(totalSeconds: number): string {
   return `${String(minutes)}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function parseBrewTime(value: string): number | null {
-  const match = /^(\d{1,2}):(\d{1,2})$/.exec(value.trim());
-
-  if (match === null) {
-    return null;
-  }
-
-  const minutes = Number(match[1]);
-  const seconds = Number(match[2]);
-
-  if (seconds > 59) {
-    return null;
-  }
-
-  return minutes * 60 + seconds;
-}
-
 /**
  * Live preview of extraction yield while the form is being filled.
  *

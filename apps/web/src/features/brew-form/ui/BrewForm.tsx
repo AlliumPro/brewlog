@@ -60,9 +60,6 @@ function daysSince(roastDate: string): number | null {
 }
 
 function toFormValues(brew: Brew): BrewFormValues {
-  const minutes = Math.floor(brew.brewTimeSeconds / 60);
-  const seconds = brew.brewTimeSeconds % 60;
-
   return {
     method: brew.method,
     methodOther: brew.methodOther ?? '',
@@ -73,7 +70,8 @@ function toFormValues(brew: Brew): BrewFormValues {
     doseGrams: brew.doseGrams,
     waterMl: brew.waterMl,
     waterTempC: brew.waterTempC,
-    brewTime: `${String(minutes)}:${String(seconds).padStart(2, '0')}`,
+    brewMinutes: Math.floor(brew.brewTimeSeconds / 60),
+    brewSeconds: brew.brewTimeSeconds % 60,
     notes: brew.notes ?? '',
     rating: brew.rating,
     tdsPercent: brew.tdsPercent,
@@ -238,14 +236,29 @@ export function BrewForm({ initial, submitLabel, busy = false, onSubmit }: BrewF
           )}
         />
 
-        <TextField
-          label="Brew time"
-          placeholder="2:45"
-          inputMode="numeric"
-          hint="Minutes and seconds"
-          error={errors.brewTime?.message}
-          {...register('brewTime')}
-        />
+        {/* Two fields, so the numeric keypad on a phone is enough — there is no colon on it */}
+        <div className={styles.pair}>
+          <TextField
+            label="Brew time, min"
+            type="number"
+            min="0"
+            max="59"
+            step="1"
+            inputMode="numeric"
+            error={errors.brewMinutes?.message}
+            {...register('brewMinutes', { valueAsNumber: true })}
+          />
+          <TextField
+            label="Brew time, sec"
+            type="number"
+            min="0"
+            max="59"
+            step="1"
+            inputMode="numeric"
+            error={errors.brewSeconds?.message}
+            {...register('brewSeconds', { valueAsNumber: true })}
+          />
+        </div>
 
         <TextField
           label="TDS (%)"

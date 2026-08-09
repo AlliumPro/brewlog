@@ -35,6 +35,8 @@ describe('critical path', () => {
     cy.contains('label', 'Bean').parent().find('input').type(bean);
     cy.contains('label', 'Grind').parent().find('input').type('medium-fine');
     cy.contains('label', 'Water (ml)').parent().find('input').clear().type('300');
+    cy.contains('label', 'Brew time, min').parent().find('input').clear().type('3');
+    cy.contains('label', 'Brew time, sec').parent().find('input').clear().type('15');
 
     // The ratio is computed as the user types; 300 ml over the default 15 g.
     cy.contains('1:20.0').should('be.visible');

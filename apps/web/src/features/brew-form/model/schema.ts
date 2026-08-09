@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 import type { BrewCreateInput } from '@/shared/api';
-import { parseBrewTime } from '@/shared/lib';
 
 const METHODS = [
   'v60',
@@ -36,7 +35,14 @@ export const brewFormSchema = z
     doseGrams: z.number().min(0.1, 'At least 0.1 g').max(200),
     waterMl: z.number().min(1, 'At least 1 ml').max(5000),
     waterTempC: z.number().min(1).max(100),
-    brewTime: z.string().refine((value) => parseBrewTime(value) !== null, 'Use mm:ss, like 2:45'),
+    /**
+     * Two fields rather than one "mm:ss" string. A numeric keypad has no colon, so on a phone
+     * the combined field was impossible to fill; asking for a text keyboard to type one
+     * separator is the wrong trade. Splitting removes the separator instead of working around
+     * the keyboard.
+     */
+    brewMinutes: z.number().int().min(0).max(59),
+    brewSeconds: z.number().int().min(0, 'Seconds run 0 to 59').max(59, 'Seconds run 0 to 59'),
     notes: z.string().trim().max(2000),
     rating: z.number().int().min(1, 'Give it a score').max(5),
     // Optional: not everyone has a refractometer on the bar. Empty input becomes null.
@@ -47,6 +53,14 @@ export const brewFormSchema = z
       .nullable(),
   })
   .superRefine((value, ctx) => {
+    if (value.brewMinutes * 60 + value.brewSeconds < 1) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['brewSeconds'],
+        message: 'A brew takes longer than nothing',
+      });
+    }
+
     if (value.method === 'other' && value.methodOther === '') {
       ctx.addIssue({
         code: 'custom',
@@ -59,12 +73,6 @@ export const brewFormSchema = z
 export type BrewFormValues = z.infer<typeof brewFormSchema>;
 
 export function toApiInput(values: BrewFormValues): BrewCreateInput {
-  const brewTimeSeconds = parseBrewTime(values.brewTime);
-
-  if (brewTimeSeconds === null) {
-    throw new Error('brewTime passed validation but could not be parsed');
-  }
-
   return {
     method: values.method,
     methodOther: values.method === 'other' ? values.methodOther : null,
@@ -75,7 +83,7 @@ export function toApiInput(values: BrewFormValues): BrewCreateInput {
     doseGrams: values.doseGrams,
     waterMl: values.waterMl,
     waterTempC: values.waterTempC,
-    brewTimeSeconds,
+    brewTimeSeconds: values.brewMinutes * 60 + values.brewSeconds,
     notes: values.notes === '' ? null : values.notes,
     rating: values.rating,
     tdsPercent: values.tdsPercent,
@@ -92,7 +100,8 @@ export const emptyBrewForm: BrewFormValues = {
   doseGrams: 15,
   waterMl: 250,
   waterTempC: 94,
-  brewTime: '2:45',
+  brewMinutes: 2,
+  brewSeconds: 45,
   notes: '',
   rating: 3,
   tdsPercent: null,
