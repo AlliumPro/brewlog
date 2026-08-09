@@ -109,7 +109,7 @@ export function StatsPage() {
                 borderRadius: '0.5rem',
               }}
             />
-            <Scatter data={data.ratingByRatio} fill="var(--color-olive)" />
+            <Scatter data={data.ratingByRatio} fill="var(--color-accent-alt)" />
           </ScatterChart>
         </ResponsiveContainer>
       </ChartFigure>
