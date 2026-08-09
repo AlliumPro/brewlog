@@ -38,6 +38,8 @@ export const brews = sqliteTable(
 export const recipes = sqliteTable('recipes', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
+  /** Stored as 0/1 — SQLite has no boolean type. */
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
   method: text('method').notNull(),
   methodOther: text('method_other'),
   beanName: text('bean_name'),
@@ -68,3 +70,16 @@ export type BrewRow = typeof brews.$inferSelect;
 export type BrewInsert = typeof brews.$inferInsert;
 export type RecipeRow = typeof recipes.$inferSelect;
 export type RecipeInsert = typeof recipes.$inferInsert;
+
+/**
+ * One row, always. Keeps the display name without inventing a user table for an application
+ * that has exactly one person in it — and leaves an obvious place for whatever the owner
+ * wants to store about themselves next.
+ */
+export const profile = sqliteTable('profile', {
+  id: text('id').primaryKey(),
+  displayName: text('display_name'),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export type ProfileRow = typeof profile.$inferSelect;

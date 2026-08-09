@@ -12,7 +12,9 @@ interface NavItem {
 const ITEMS: NavItem[] = [
   { to: '/', label: 'Journal', end: true },
   { to: '/brews/new', label: 'Log' },
+  { to: '/recipes', label: 'Recipes' },
   { to: '/stats', label: 'Stats' },
+  { to: '/profile', label: 'You' },
 ];
 
 /**

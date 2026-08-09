@@ -23,6 +23,12 @@ const BrewDetailsPage = lazy(() =>
 const StatsPage = lazy(() =>
   import('@/pages/stats').then((module) => ({ default: module.StatsPage })),
 );
+const RecipesPage = lazy(() =>
+  import('@/pages/recipes').then((module) => ({ default: module.RecipesPage })),
+);
+const ProfilePage = lazy(() =>
+  import('@/pages/profile').then((module) => ({ default: module.ProfilePage })),
+);
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +45,8 @@ export const router = createBrowserRouter([
       { path: 'brews/new', element: <NewBrewPage />, errorElement: <RouteError /> },
       { path: 'brews/:id', element: <BrewDetailsPage />, errorElement: <RouteError /> },
       { path: 'stats', element: <StatsPage />, errorElement: <RouteError /> },
+      { path: 'recipes', element: <RecipesPage />, errorElement: <RouteError /> },
+      { path: 'profile', element: <ProfilePage />, errorElement: <RouteError /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

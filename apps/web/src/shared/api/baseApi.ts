@@ -15,6 +15,6 @@ export const baseApi = createApi({
     baseUrl: config.apiUrl,
     credentials: 'include',
   }),
-  tagTypes: ['Brew', 'Recipe', 'Stats', 'Suggestions', 'Session'],
+  tagTypes: ['Brew', 'Recipe', 'Stats', 'Suggestions', 'Session', 'Profile'],
   endpoints: () => ({}),
 });

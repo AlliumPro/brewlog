@@ -7,3 +7,4 @@ export { SelectField } from './SelectField';
 export type { SelectOption } from './SelectField';
 export { SliderField } from './SliderField';
 export { EmptyState, ErrorState, Skeleton } from './States';
+export { ThemeSwitcher } from './ThemeSwitcher';

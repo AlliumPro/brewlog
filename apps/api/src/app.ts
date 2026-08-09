@@ -19,6 +19,7 @@ import { sessions } from './db/schema.js';
 import { authPlugin } from './plugins/auth.js';
 import { swaggerPlugin } from './plugins/swagger.js';
 import { createBrewRepository } from './repositories/brew.repository.js';
+import { createProfileRepository } from './repositories/profile.repository.js';
 import { createRecipeRepository } from './repositories/recipe.repository.js';
 import { createSessionRepository } from './repositories/session.repository.js';
 import { createStatsRepository } from './repositories/stats.repository.js';
@@ -26,6 +27,7 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerBrewRoutes } from './routes/brews.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerPhotoRoutes } from './routes/photos.js';
+import { registerProfileRoutes } from './routes/profile.js';
 import { registerRecipeRoutes } from './routes/recipes.js';
 import { registerStatsRoutes } from './routes/stats.js';
 import { registerSuggestionRoutes } from './routes/suggestions.js';
@@ -161,6 +163,7 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
 
   // Dependency graph, wired once. Repositories talk SQL, services own the rules.
   const brewRepository = createBrewRepository(db);
+  const profileRepository = createProfileRepository(db);
   const recipeRepository = createRecipeRepository(db);
   const sessionRepository = createSessionRepository(db);
   const statsRepository = createStatsRepository(db);
@@ -239,6 +242,7 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
       registerAuthRoutes(scoped, { authService, env });
       registerBrewRoutes(scoped, { brewService });
       registerPhotoRoutes(scoped, { brewService });
+      registerProfileRoutes(scoped, { profileRepository });
       registerRecipeRoutes(scoped, { recipeService });
       registerStatsRoutes(scoped, { statsService });
       registerSuggestionRoutes(scoped, { brewService });

@@ -2173,6 +2173,195 @@
         }
       }
     },
+    "/api/profile": {
+      "get": {
+        "summary": "Read the owner profile",
+        "tags": [
+          "profile"
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "nullable": true,
+                      "description": "How the owner is addressed in the interface",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "displayName"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Owner profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update the owner profile",
+        "tags": [
+          "profile"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "displayName"
+                ],
+                "description": "Profile update"
+              }
+            }
+          },
+          "description": "Profile update"
+        },
+        "responses": {
+          "200": {
+            "description": "Owner profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "nullable": true,
+                      "description": "How the owner is addressed in the interface",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "displayName"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Owner profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recipes": {
       "get": {
         "summary": "List saved recipes",
@@ -2197,6 +2386,9 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "isFavorite": {
+                            "type": "boolean"
                           },
                           "method": {
                             "type": "string",
@@ -2252,6 +2444,7 @@
                         "required": [
                           "id",
                           "name",
+                          "isFavorite",
                           "method",
                           "methodOther",
                           "beanName",
@@ -2329,6 +2522,10 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
+                  },
+                  "isFavorite": {
+                    "default": false,
+                    "type": "boolean"
                   },
                   "method": {
                     "type": "string",
@@ -2424,6 +2621,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "isFavorite": {
+                      "type": "boolean"
+                    },
                     "method": {
                       "type": "string",
                       "enum": [
@@ -2478,6 +2678,7 @@
                   "required": [
                     "id",
                     "name",
+                    "isFavorite",
                     "method",
                     "methodOther",
                     "beanName",
@@ -2635,6 +2836,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "isFavorite": {
+                      "type": "boolean"
+                    },
                     "method": {
                       "type": "string",
                       "enum": [
@@ -2689,6 +2893,7 @@
                   "required": [
                     "id",
                     "name",
+                    "isFavorite",
                     "method",
                     "methodOther",
                     "beanName",
@@ -2795,6 +3000,9 @@
                     "minLength": 1,
                     "maxLength": 80
                   },
+                  "isFavorite": {
+                    "type": "boolean"
+                  },
                   "method": {
                     "type": "string",
                     "enum": [
@@ -2889,6 +3097,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "isFavorite": {
+                      "type": "boolean"
+                    },
                     "method": {
                       "type": "string",
                       "enum": [
@@ -2943,6 +3154,7 @@
                   "required": [
                     "id",
                     "name",
+                    "isFavorite",
                     "method",
                     "methodOther",
                     "beanName",
@@ -3646,6 +3858,10 @@
     {
       "name": "recipes",
       "description": "Brew templates"
+    },
+    {
+      "name": "profile",
+      "description": "Owner profile"
     },
     {
       "name": "stats",

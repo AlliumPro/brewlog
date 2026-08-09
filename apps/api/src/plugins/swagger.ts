@@ -40,6 +40,7 @@ const plugin: FastifyPluginAsync<SwaggerPluginOptions> = async (app, { env }) =>
         { name: 'brews', description: 'Brew entries' },
         { name: 'photos', description: 'One photo per brew' },
         { name: 'recipes', description: 'Brew templates' },
+        { name: 'profile', description: 'Owner profile' },
         { name: 'stats', description: 'Aggregates for the statistics screen' },
         { name: 'suggestions', description: 'Autocomplete over previously entered values' },
         { name: 'operational', description: 'Health probes' },

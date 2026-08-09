@@ -1,0 +1,83 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.tab {
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+}
+
+.tab[data-state='active'] {
+  color: var(--color-accent-contrast);
+  background: var(--gradient-accent);
+}
+
+.panel {
+  padding-top: var(--space-6);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 24rem;
+}
+
+.formActions {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.savedNote {
+  font-size: var(--text-sm);
+  color: var(--color-success);
+}
+
+.setting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.settingName {
+  font-weight: 500;
+}
+
+.settingHint {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+@media (width >= 48rem) {
+  .title {
+    font-size: var(--text-3xl);
+  }
+}

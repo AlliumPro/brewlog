@@ -157,6 +157,52 @@ async function main() {
         `status ${String(created.status)}, ratio ${String(body?.ratio)}`,
       );
 
+      // Profile and favourites: both write, so both prove the new tables migrated in the
+      // image rather than only in a test database.
+      const named = await status('/api/profile', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ displayName: 'Smoke' }),
+      });
+      report(
+        'profile name saves and reads back',
+        named.status === 200 && (await named.json()).displayName === 'Smoke',
+      );
+
+      const recipeName = `Smoke recipe ${String(Date.now())}`;
+      const recipe = await status('/api/recipes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({
+          name: recipeName,
+          method: 'v60',
+          doseGrams: 15,
+          waterMl: 250,
+          waterTempC: 94,
+          brewTimeSeconds: 165,
+        }),
+      });
+      const recipeBody = recipe.status === 201 ? await recipe.json() : undefined;
+
+      report(
+        'recipe is created unfavourited',
+        recipe.status === 201 && recipeBody?.isFavorite === false,
+      );
+
+      if (recipeBody?.id !== undefined) {
+        const starred = await status(`/api/recipes/${recipeBody.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({ isFavorite: true }),
+        });
+        report(
+          'recipe can be marked a favourite',
+          starred.status === 200 && (await starred.json()).isFavorite === true,
+        );
+
+        await status(`/api/recipes/${recipeBody.id}`, { method: 'DELETE', headers: { cookie } });
+      }
+
       if (body?.id !== undefined) {
         const removed = await status(`/api/brews/${body.id}`, {
           method: 'DELETE',

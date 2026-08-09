@@ -30,8 +30,14 @@ describe('BottomNav', () => {
     const { container } = renderWithProviders(<BottomNav />, '/stats');
     const pill = container.querySelector('[aria-hidden="true"]');
 
-    // Third item, so the pill is offset by two of its own widths.
-    expect(pill).toHaveStyle({ '--index': '2' });
+    // Fourth item — Journal, Log, Recipes, Stats — so the pill is offset by three widths.
+    expect(pill).toHaveStyle({ '--index': '3' });
+  });
+
+  it('reaches the profile section', () => {
+    renderWithProviders(<BottomNav />, '/profile');
+
+    expect(screen.getByRole('link', { name: 'You' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('falls back to the first segment on an unknown path', () => {

@@ -16,6 +16,7 @@ import { Button, ErrorState, HeroValue, Rating, Skeleton } from '@/shared/ui';
 
 import styles from './BrewDetailsPage.module.css';
 import { DeleteBrewButton } from './DeleteBrewButton';
+import { SaveAsRecipeButton } from './SaveAsRecipeButton';
 
 export function BrewDetailsPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -145,6 +146,7 @@ export function BrewDetailsPage() {
         >
           Edit
         </Button>
+        <SaveAsRecipeButton brew={brew} />
         <DeleteBrewButton id={brew.id} beanName={brew.beanName} />
       </div>
     </article>

@@ -4,6 +4,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+### Added
+
+- **Light theme** alongside the dark one, both built on the brand accents #BFF1E1 and #DA8FDD
+  applied as a gradient. The theme follows the device by default; a three-state switcher
+  (auto / light / dark) lives in the account screen. Contrast of all 14 text pairs is verified
+  by `npm run contrast` inside `verify`.
+- **Installable PWA**: manifest with a maskable icon, service worker with an update prompt
+  rather than a silent reload, iPhone safe-area handling for the notch and the Dynamic Island.
+- **Bottom segmented navigation** in the iOS style — a pill that slides between sections,
+  reachable with a thumb.
+- **TDS and extraction yield.** A refractometer reading is optional; when present the app
+  derives extraction from it, allowing for the water the coffee bed keeps, and says what the
+  resulting band means.
+- **Recipes screen with favourites.** A brew can be saved as a recipe from its details screen;
+  favourites sort to the top.
+- **Account screen** with a Profile tab for the display name and an Appearance tab for the
+  theme. The name is used to greet the owner on the journal screen.
+
+### Fixed
+
+- The inline theme script violated `script-src 'self'`, so in the container the browser refused
+  it and the theme flashed on every load with nothing reporting an error. The server now hashes
+  the inline scripts of the page it serves and admits them by hash.
+- `GET /` answered 403 because the static plugin treated the root as a directory listing.
+- An empty TDS field recorded a measurement of zero: react-hook-form hands `setValueAs` the
+  untouched default and `Number(null)` is 0.
+
 ### Not yet done
 
 - Deployment to a VPS, a domain and TLS (pipeline phase 7)

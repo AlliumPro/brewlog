@@ -3,7 +3,7 @@
 # ---- builder -------------------------------------------------------------------------------
 # Debian slim rather than alpine: sharp downloads a ready glibc binary, and the C++ compiled
 # here links against the same libc as the runtime stage.
-FROM node:26-slim AS builder
+FROM node:22-slim AS builder
 
 # better-sqlite3 v13 publishes no prebuilt binaries and has no install script, so npm sees its
 # binding.gyp and runs node-gyp itself. That needs Python and a compiler. They live in this
@@ -39,7 +39,7 @@ RUN npm run build --workspace @brewlog/api \
 RUN npm prune --omit=dev
 
 # ---- runtime -------------------------------------------------------------------------------
-FROM node:26-slim AS runtime
+FROM node:22-slim AS runtime
 
 # dumb-init reaps zombies and forwards signals, so SIGTERM actually reaches Node.
 #

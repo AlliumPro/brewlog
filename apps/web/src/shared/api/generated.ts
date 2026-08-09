@@ -1012,6 +1012,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the owner profile */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Owner profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description How the owner is addressed in the interface */
+                            displayName: string | null;
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the owner profile */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description Profile update */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        displayName: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Owner profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description How the owner is addressed in the interface */
+                            displayName: string | null;
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/recipes": {
         parameters: {
             query?: never;
@@ -1039,6 +1156,7 @@ export interface paths {
                             items: {
                                 id: string;
                                 name: string;
+                                isFavorite: boolean;
                                 /** @enum {string} */
                                 method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                                 methodOther: string | null;
@@ -1086,6 +1204,8 @@ export interface paths {
                 content: {
                     "application/json": {
                         name: string;
+                        /** @default false */
+                        isFavorite?: boolean;
                         /** @enum {string} */
                         method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                         /** @default null */
@@ -1117,6 +1237,7 @@ export interface paths {
                         "application/json": {
                             id: string;
                             name: string;
+                            isFavorite: boolean;
                             /** @enum {string} */
                             method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                             methodOther: string | null;
@@ -1215,6 +1336,7 @@ export interface paths {
                         "application/json": {
                             id: string;
                             name: string;
+                            isFavorite: boolean;
                             /** @enum {string} */
                             method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                             methodOther: string | null;
@@ -1337,6 +1459,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         name?: string;
+                        isFavorite?: boolean;
                         /** @enum {string} */
                         method?: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                         methodOther?: string | null;
@@ -1360,6 +1483,7 @@ export interface paths {
                         "application/json": {
                             id: string;
                             name: string;
+                            isFavorite: boolean;
                             /** @enum {string} */
                             method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                             methodOther: string | null;

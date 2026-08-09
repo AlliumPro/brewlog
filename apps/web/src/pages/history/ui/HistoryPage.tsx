@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { BrewCard, isBrewMethod, useGetBrewsQuery } from '@/entities/brew';
+import { useGetProfileQuery } from '@/entities/profile';
 import type { BrewListQuery, BrewMethod, BrewSort } from '@/shared/api';
 import { Button, EmptyState, ErrorState, Skeleton } from '@/shared/ui';
 
@@ -31,7 +32,27 @@ function queryFromParams(params: URLSearchParams, limit: number): BrewListQuery 
   };
 }
 
+/**
+ * The name set in the profile is used here and nowhere else, which is the whole reason to ask
+ * for it. Without a name the heading stays the plain one rather than greeting an empty space.
+ */
+function useGreeting(): string {
+  const { data } = useGetProfileQuery();
+  const name = data?.displayName;
+
+  if (name === undefined || name === null || name === '') {
+    return 'Journal';
+  }
+
+  const hour = new Date().getHours();
+  const partOfDay =
+    hour < 5 ? 'Late night' : hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+
+  return `${partOfDay}, ${name}`;
+}
+
 export function HistoryPage() {
+  const greeting = useGreeting();
   const [params] = useSearchParams();
   const [limit, setLimit] = useState(PAGE_SIZE);
   const query = queryFromParams(params, limit);
@@ -41,7 +62,7 @@ export function HistoryPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>History</h1>
+      <h1 className={styles.title}>{greeting}</h1>
 
       <BrewFilters />
 

@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 
 import type { Db } from '../db/client.js';
 import { recipes } from '../db/schema.js';
@@ -7,7 +7,8 @@ import type { RecipeInsert, RecipeRow } from '../db/schema.js';
 export function createRecipeRepository(db: Db) {
   return {
     async list(): Promise<RecipeRow[]> {
-      return db.select().from(recipes).orderBy(asc(recipes.name));
+      // Favourites first, then alphabetical: the point of marking one is to stop scrolling.
+      return db.select().from(recipes).orderBy(desc(recipes.isFavorite), asc(recipes.name));
     },
 
     async findById(id: string): Promise<RecipeRow | undefined> {

@@ -4,7 +4,6 @@ import { useLogoutMutation } from '@/features/auth';
 import { Button } from '@/shared/ui';
 
 import styles from './AppHeader.module.css';
-import { ThemeSwitcher } from './ThemeSwitcher';
 
 /**
  * Brand, theme and lock only. Section navigation moved to the bottom bar, where a thumb can
@@ -22,8 +21,6 @@ export function AppHeader() {
         </NavLink>
 
         <div className={styles.actions}>
-          <ThemeSwitcher />
-
           <Button
             variant="ghost"
             disabled={isLoading}
