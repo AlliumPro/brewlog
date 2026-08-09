@@ -112,6 +112,55 @@ describe('brews', () => {
     expect(bySearch.json().items[0].beanName).toBe('Filter Aeropress');
   });
 
+  it('computes extraction from TDS, allowing for water the bed keeps', async () => {
+    // 15 g of coffee holds ~30 g of water, so 250 ml poured leaves ~220 g in the cup:
+    // 1.35% × 220 / 15 = 19.8%
+    const response = await create({ tdsPercent: 1.35, beanName: 'Extraction Check' });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().extractionPercent).toBe(19.8);
+    expect(response.json().tdsPercent).toBe(1.35);
+  });
+
+  it('treats espresso millilitres as the shot, not as water poured', async () => {
+    // An espresso yield is already the beverage; subtracting retained water would leave zero.
+    // 9% × 36 / 18 = 18.0%
+    const response = await create({
+      method: 'espresso',
+      doseGrams: 18,
+      waterMl: 36,
+      tdsPercent: 9,
+      beanName: 'Espresso Check',
+    });
+
+    expect(response.json().extractionPercent).toBe(18);
+  });
+
+  it('reports no extraction rather than a wrong one when the numbers cannot describe a brew', async () => {
+    // 20 g of coffee would keep 40 g of water, more than the 30 ml poured.
+    const impossible = await create({
+      doseGrams: 20,
+      waterMl: 30,
+      tdsPercent: 1.4,
+      beanName: 'Impossible',
+    });
+
+    expect(impossible.json().extractionPercent).toBeNull();
+  });
+
+  it('leaves extraction empty when TDS was not measured', async () => {
+    const response = await create({ beanName: 'No Refractometer' });
+
+    expect(response.json().tdsPercent).toBeNull();
+    expect(response.json().extractionPercent).toBeNull();
+  });
+
+  it('rejects a TDS reading with a misplaced decimal', async () => {
+    const response = await create({ tdsPercent: 138 });
+
+    expect(response.statusCode).toBe(422);
+  });
+
   it('rejects an out-of-range rating with 422', async () => {
     const response = await create({ rating: 9 });
 

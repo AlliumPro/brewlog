@@ -21,6 +21,8 @@ export const brews = sqliteTable(
     brewTimeSeconds: integer('brew_time_seconds').notNull(),
     notes: text('notes'),
     rating: integer('rating').notNull(),
+    /** Measured with a refractometer, in percent. Optional — not everyone owns one. */
+    tdsPercent: real('tds_percent'),
     photoPath: text('photo_path'),
     brewedAt: text('brewed_at').notNull(),
     createdAt: text('created_at').notNull(),

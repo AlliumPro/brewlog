@@ -1,8 +1,11 @@
 export {
+  extractionPreview,
+  extractionVerdict,
   formatBrewTime,
   formatDate,
   formatDaysAfterRoast,
   formatDose,
+  formatExtraction,
   formatRatio,
   formatTemperature,
   parseBrewTime,

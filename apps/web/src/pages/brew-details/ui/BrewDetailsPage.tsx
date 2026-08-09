@@ -8,6 +8,7 @@ import {
   formatDate,
   formatDaysAfterRoast,
   formatDose,
+  formatExtraction,
   formatRatio,
   formatTemperature,
 } from '@/shared/lib';
@@ -87,6 +88,13 @@ export function BrewDetailsPage() {
         <HeroValue label="ratio" value={formatRatio(brew.ratio)} size="lg" />
         <HeroValue label="time" value={formatBrewTime(brew.brewTimeSeconds)} size="lg" />
         <HeroValue label="temperature" value={formatTemperature(brew.waterTempC)} size="lg" />
+        {brew.extractionPercent !== null && (
+          <HeroValue
+            label="extraction"
+            value={formatExtraction(brew.extractionPercent)}
+            size="lg"
+          />
+        )}
       </section>
 
       <dl className={styles.details}>

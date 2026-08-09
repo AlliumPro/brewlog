@@ -7,7 +7,14 @@ import {
   useGetRoasterSuggestionsQuery,
 } from '@/entities/brew';
 import type { Brew, BrewCreateInput } from '@/shared/api';
-import { formatDose, formatRatio, formatTemperature } from '@/shared/lib';
+import {
+  extractionPreview,
+  extractionVerdict,
+  formatDose,
+  formatExtraction,
+  formatRatio,
+  formatTemperature,
+} from '@/shared/lib';
 import {
   Button,
   HeroValue,
@@ -30,6 +37,13 @@ interface BrewFormProps {
 }
 
 const MS_PER_DAY = 86_400_000;
+
+/** Said plainly, because "19.4%" means nothing without the band it sits in. */
+const EXTRACTION_NOTE: Record<'under' | 'ideal' | 'over', string> = {
+  under: 'Under 18% — often sour and thin. Grind finer or brew longer.',
+  ideal: 'In the 18–22% band most brews taste balanced in.',
+  over: 'Over 22% — often bitter and drying. Grind coarser or brew shorter.',
+};
 
 function daysSince(roastDate: string): number | null {
   if (roastDate === '') {
@@ -62,6 +76,7 @@ function toFormValues(brew: Brew): BrewFormValues {
     brewTime: `${String(minutes)}:${String(seconds).padStart(2, '0')}`,
     notes: brew.notes ?? '',
     rating: brew.rating,
+    tdsPercent: brew.tdsPercent,
   };
 }
 
@@ -82,10 +97,17 @@ export function BrewForm({ initial, submitLabel, busy = false, onSubmit }: BrewF
   const dose = watch('doseGrams');
   const water = watch('waterMl');
   const roastDate = watch('roastDate');
+  const tds = watch('tdsPercent');
 
   // Recomputed as the user types: the ratio is the reason to fill this form at all.
   const ratio = dose > 0 ? water / dose : null;
   const age = daysSince(roastDate);
+  const extraction = extractionPreview({
+    tdsPercent: tds,
+    doseGrams: dose,
+    waterMl: water,
+    isEspresso: method === 'espresso',
+  });
 
   const { data: beanSuggestions = [] } = useGetBeanSuggestionsQuery(undefined);
   const { data: roasterSuggestions = [] } = useGetRoasterSuggestionsQuery(undefined);
@@ -224,6 +246,32 @@ export function BrewForm({ initial, submitLabel, busy = false, onSubmit }: BrewF
           error={errors.brewTime?.message}
           {...register('brewTime')}
         />
+
+        <TextField
+          label="TDS (%)"
+          type="number"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="1.38"
+          hint="From the refractometer. Leave empty if you did not measure."
+          error={errors.tdsPercent?.message}
+          {...register('tdsPercent', {
+            // "Not measured" is null, not zero. Both the empty input ('') and the untouched
+            // default (null) arrive here, and Number(null) is 0 — which would silently record
+            // a TDS of zero for everyone who never took a reading.
+            setValueAs: (value: unknown) =>
+              value === '' || value === null || value === undefined ? null : Number(value),
+          })}
+        />
+
+        {extraction !== null && (
+          <div className={styles.extraction} aria-live="polite">
+            <HeroValue label="extraction" value={formatExtraction(extraction)} size="lg" />
+            <p className={styles.extractionNote}>
+              {EXTRACTION_NOTE[extractionVerdict(extraction)]}
+            </p>
+          </div>
+        )}
       </fieldset>
 
       <fieldset className={styles.group}>
