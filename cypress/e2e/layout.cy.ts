@@ -6,7 +6,7 @@
  *   npm run dev
  *   CYPRESS_BREWLOG_PASSWORD='…' npm run test:e2e
  */
-const password = Cypress.env('BREWLOG_PASSWORD') as string | undefined;
+import { loginOnce } from '../support/session';
 
 /** The narrowest phone still in circulation. If it fits here it fits everywhere. */
 const NARROW = { width: 320, height: 640 };
@@ -25,15 +25,8 @@ function expectNoHorizontalOverflow() {
 
 describe('layout on a narrow screen', () => {
   beforeEach(() => {
-    if (password === undefined || password === '') {
-      throw new Error('CYPRESS_BREWLOG_PASSWORD is required');
-    }
-
     cy.viewport(NARROW.width, NARROW.height);
-    cy.visit('/login');
-    cy.get('input[type="password"]').type(password, { log: false });
-    cy.contains('button', 'Open the journal').click();
-    cy.location('pathname').should('eq', '/');
+    loginOnce();
   });
 
   for (const [name, path] of [
@@ -75,6 +68,25 @@ describe('layout on a narrow screen', () => {
     }
   });
 
+  it('keeps the active segment readable on a brew page', () => {
+    // Regression: the pill was placed by one calculation while the styling came from another,
+    // so on this route the label stayed muted grey on the bright gradient.
+    cy.visit('/');
+    cy.get('body').then(($body) => {
+      if ($body.find('article a').length === 0) {
+        return;
+      }
+
+      cy.get('article a').first().click();
+      cy.location('pathname').should('match', /^\/brews\/[0-9a-f-]+$/);
+      cy.contains('nav[aria-label="Sections"] a', 'Journal').should(
+        'have.attr',
+        'aria-current',
+        'page',
+      );
+    });
+  });
+
   it('does not hide the last card behind the navigation bar', () => {
     cy.visit('/');
     cy.get('body').then(($body) => {
@@ -105,7 +117,3 @@ describe('layout on a narrow screen', () => {
     });
   });
 });
-
-// Keeps this file a module: Cypress specs otherwise share one global scope and the
-// `password` constant collides with the one in critical-path.cy.ts.
-export {};

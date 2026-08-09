@@ -98,6 +98,12 @@ npm run dev
 CYPRESS_BREWLOG_PASSWORD='your passphrase here' npm run test:e2e
 ```
 
+The suite signs in **once** for the whole run and reuses the session, because the API allows
+five login attempts per quarter hour and a suite that signs in per test spends that budget
+immediately — every later case then fails with 429, which looks like a broken application and
+is not one. If a run does hit the limit, restart the API: the counter is in memory, so it
+clears on restart.
+
 ## Environment
 
 Every variable is listed in [.env.example](.env.example) with an empty value. Nothing real goes
