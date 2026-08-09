@@ -38,7 +38,11 @@ export const brews = sqliteTable(
 export const recipes = sqliteTable('recipes', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
-  /** Stored as 0/1 — SQLite has no boolean type. */
+  /**
+   * Unused. Favourites were dropped from the interface: the recipes screen is already the
+   * short list a favourite would have produced. The column stays because removing it is a
+   * destructive migration, and it costs one byte a row.
+   */
   isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
   method: text('method').notNull(),
   methodOther: text('method_other'),

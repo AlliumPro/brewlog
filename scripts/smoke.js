@@ -185,21 +185,11 @@ async function main() {
       const recipeBody = recipe.status === 201 ? await recipe.json() : undefined;
 
       report(
-        'recipe is created unfavourited',
-        recipe.status === 201 && recipeBody?.isFavorite === false,
+        'recipe saves and reads back',
+        recipe.status === 201 && recipeBody?.name === recipeName,
       );
 
       if (recipeBody?.id !== undefined) {
-        const starred = await status(`/api/recipes/${recipeBody.id}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json', cookie },
-          body: JSON.stringify({ isFavorite: true }),
-        });
-        report(
-          'recipe can be marked a favourite',
-          starred.status === 200 && (await starred.json()).isFavorite === true,
-        );
-
         await status(`/api/recipes/${recipeBody.id}`, { method: 'DELETE', headers: { cookie } });
       }
 

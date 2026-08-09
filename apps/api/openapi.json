@@ -2387,9 +2387,6 @@
                           "name": {
                             "type": "string"
                           },
-                          "isFavorite": {
-                            "type": "boolean"
-                          },
                           "method": {
                             "type": "string",
                             "enum": [
@@ -2444,7 +2441,6 @@
                         "required": [
                           "id",
                           "name",
-                          "isFavorite",
                           "method",
                           "methodOther",
                           "beanName",
@@ -2522,10 +2518,6 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
-                  },
-                  "isFavorite": {
-                    "default": false,
-                    "type": "boolean"
                   },
                   "method": {
                     "type": "string",
@@ -2621,9 +2613,6 @@
                     "name": {
                       "type": "string"
                     },
-                    "isFavorite": {
-                      "type": "boolean"
-                    },
                     "method": {
                       "type": "string",
                       "enum": [
@@ -2678,7 +2667,6 @@
                   "required": [
                     "id",
                     "name",
-                    "isFavorite",
                     "method",
                     "methodOther",
                     "beanName",
@@ -2836,9 +2824,6 @@
                     "name": {
                       "type": "string"
                     },
-                    "isFavorite": {
-                      "type": "boolean"
-                    },
                     "method": {
                       "type": "string",
                       "enum": [
@@ -2893,7 +2878,6 @@
                   "required": [
                     "id",
                     "name",
-                    "isFavorite",
                     "method",
                     "methodOther",
                     "beanName",
@@ -3000,9 +2984,6 @@
                     "minLength": 1,
                     "maxLength": 80
                   },
-                  "isFavorite": {
-                    "type": "boolean"
-                  },
                   "method": {
                     "type": "string",
                     "enum": [
@@ -3097,9 +3078,6 @@
                     "name": {
                       "type": "string"
                     },
-                    "isFavorite": {
-                      "type": "boolean"
-                    },
                     "method": {
                       "type": "string",
                       "enum": [
@@ -3154,7 +3132,6 @@
                   "required": [
                     "id",
                     "name",
-                    "isFavorite",
                     "method",
                     "methodOther",
                     "beanName",

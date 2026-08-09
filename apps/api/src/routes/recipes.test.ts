@@ -31,6 +31,25 @@ describe('recipes', () => {
     await context.close();
   });
 
+  it('lists recipes alphabetically', async () => {
+    for (const name of ['Zulu', 'Alpha', 'Mike']) {
+      await app.inject({
+        method: 'POST',
+        url: '/api/recipes',
+        headers: { cookie },
+        payload: sampleRecipe({ name }),
+      });
+    }
+
+    const listed = await app.inject({ method: 'GET', url: '/api/recipes', headers: { cookie } });
+
+    expect(listed.json().items.map((item: { name: string }) => item.name)).toEqual([
+      'Alpha',
+      'Mike',
+      'Zulu',
+    ]);
+  });
+
   it('creates, reads, lists, updates and deletes a recipe', async () => {
     const created = await app.inject({
       method: 'POST',
@@ -52,7 +71,7 @@ describe('recipes', () => {
 
     const listed = await app.inject({ method: 'GET', url: '/api/recipes', headers: { cookie } });
 
-    expect(listed.json().items).toHaveLength(1);
+    expect(listed.json().items.some((item: { id: string }) => item.id === id)).toBe(true);
 
     const patched = await app.inject({
       method: 'PATCH',
@@ -79,71 +98,6 @@ describe('recipes', () => {
     });
 
     expect(gone.statusCode).toBe(404);
-  });
-
-  it('starts a recipe off as not a favourite', async () => {
-    const created = await app.inject({
-      method: 'POST',
-      url: '/api/recipes',
-      headers: { cookie },
-      payload: sampleRecipe({ name: 'Plain' }),
-    });
-
-    expect(created.json().isFavorite).toBe(false);
-  });
-
-  it('marks and unmarks a favourite', async () => {
-    const created = await app.inject({
-      method: 'POST',
-      url: '/api/recipes',
-      headers: { cookie },
-      payload: sampleRecipe({ name: 'Togglable' }),
-    });
-    const id = created.json().id;
-
-    const marked = await app.inject({
-      method: 'PATCH',
-      url: `/api/recipes/${id}`,
-      headers: { cookie },
-      payload: { isFavorite: true },
-    });
-
-    expect(marked.json().isFavorite).toBe(true);
-
-    const unmarked = await app.inject({
-      method: 'PATCH',
-      url: `/api/recipes/${id}`,
-      headers: { cookie },
-      payload: { isFavorite: false },
-    });
-
-    expect(unmarked.json().isFavorite).toBe(false);
-  });
-
-  it('lists favourites first, then the rest alphabetically', async () => {
-    // Named so that alphabetical order alone would put the favourite last.
-    for (const name of ['Alpha', 'Beta', 'Zulu']) {
-      await app.inject({
-        method: 'POST',
-        url: '/api/recipes',
-        headers: { cookie },
-        payload: sampleRecipe({ name }),
-      });
-    }
-
-    const listed = await app.inject({ method: 'GET', url: '/api/recipes', headers: { cookie } });
-    const zulu = listed.json().items.find((item: { name: string }) => item.name === 'Zulu');
-
-    await app.inject({
-      method: 'PATCH',
-      url: `/api/recipes/${zulu.id}`,
-      headers: { cookie },
-      payload: { isFavorite: true },
-    });
-
-    const reordered = await app.inject({ method: 'GET', url: '/api/recipes', headers: { cookie } });
-
-    expect(reordered.json().items[0].name).toBe('Zulu');
   });
 
   it('refuses a duplicate name with 409', async () => {

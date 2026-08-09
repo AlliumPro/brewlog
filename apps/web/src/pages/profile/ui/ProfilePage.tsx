@@ -1,7 +1,9 @@
 import { Tabs } from 'radix-ui';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import { useGetProfileQuery, useUpdateProfileMutation } from '@/entities/profile';
+import { useLogoutMutation } from '@/features/auth';
 import { Button, ErrorState, Skeleton, TextField, ThemeSwitcher } from '@/shared/ui';
 
 import styles from './ProfilePage.module.css';
@@ -9,6 +11,8 @@ import styles from './ProfilePage.module.css';
 export function ProfilePage() {
   const { data, isLoading, isError, refetch } = useGetProfileQuery();
   const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -92,6 +96,25 @@ export function ProfilePage() {
             <ThemeSwitcher />
           </div>
         </Tabs.Content>
+
+        <div className={styles.logout}>
+          <Button
+            variant="secondary"
+            disabled={isLoggingOut}
+            onClick={() => {
+              void logout()
+                .unwrap()
+                .then(() => {
+                  void navigate('/login', { replace: true });
+                });
+            }}
+          >
+            {isLoggingOut ? 'Logging out…' : 'Log out'}
+          </Button>
+          <p className={styles.logoutHint}>
+            Ends this session on the server, so the cookie stops working everywhere.
+          </p>
+        </div>
       </Tabs.Root>
     </div>
   );

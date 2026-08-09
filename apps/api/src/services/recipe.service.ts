@@ -10,7 +10,6 @@ function toRecipe(row: RecipeRow): Recipe {
   return {
     id: row.id,
     name: row.name,
-    isFavorite: row.isFavorite,
     method: brewMethodSchema.parse(row.method),
     methodOther: row.methodOther,
     beanName: row.beanName,

@@ -1,18 +1,12 @@
-import {
-  FavoriteToggle,
-  useDeleteRecipeMutation,
-  useGetRecipesQuery,
-  useSetRecipeFavoriteMutation,
-} from '@/entities/recipe';
 import { METHOD_LABELS } from '@/entities/brew';
-import { formatBrewTime, formatDose, formatRatio, formatTemperature } from '@/shared/lib';
+import { useDeleteRecipeMutation, useGetRecipesQuery } from '@/entities/recipe';
+import { formatBrewTime, formatDose, formatTemperature } from '@/shared/lib';
 import { Button, ConfirmDialog, EmptyState, ErrorState, Skeleton } from '@/shared/ui';
 
 import styles from './RecipesPage.module.css';
 
 export function RecipesPage() {
   const { data, isLoading, isError, refetch } = useGetRecipesQuery();
-  const [setFavorite] = useSetRecipeFavoriteMutation();
   const [deleteRecipe, { isLoading: isDeleting }] = useDeleteRecipeMutation();
 
   if (isLoading) {
@@ -43,36 +37,24 @@ export function RecipesPage() {
         {data.items.map((recipe) => (
           <li key={recipe.id} className={styles.card}>
             <div className={styles.head}>
-              <div>
-                <h2 className={styles.name}>{recipe.name}</h2>
-                <p className={styles.meta}>
-                  {METHOD_LABELS[recipe.method]}
-                  {recipe.beanName !== null && ` · ${recipe.beanName}`}
-                </p>
-              </div>
-
-              <FavoriteToggle
-                isFavorite={recipe.isFavorite}
-                name={recipe.name}
-                onChange={(next) => {
-                  void setFavorite({ id: recipe.id, isFavorite: next });
-                }}
-              />
+              <h2 className={styles.name}>{recipe.name}</h2>
+              <p className={styles.meta}>
+                {METHOD_LABELS[recipe.method]}
+                {recipe.beanName !== null && ` · ${recipe.beanName}`}
+              </p>
             </div>
 
             <dl className={styles.numbers}>
-              {recipe.doseGrams !== null && recipe.waterMl !== null && (
-                <div>
-                  <dt className={styles.numberLabel}>ratio</dt>
-                  <dd className={styles.numberValue}>
-                    {formatRatio(recipe.waterMl / recipe.doseGrams)}
-                  </dd>
-                </div>
-              )}
               {recipe.doseGrams !== null && (
                 <div>
                   <dt className={styles.numberLabel}>dose</dt>
                   <dd className={styles.numberValue}>{formatDose(recipe.doseGrams)}</dd>
+                </div>
+              )}
+              {recipe.waterMl !== null && (
+                <div>
+                  <dt className={styles.numberLabel}>water</dt>
+                  <dd className={styles.numberValue}>{`${String(recipe.waterMl)} ml`}</dd>
                 </div>
               )}
               {recipe.waterTempC !== null && (

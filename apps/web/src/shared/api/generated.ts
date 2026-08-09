@@ -1156,7 +1156,6 @@ export interface paths {
                             items: {
                                 id: string;
                                 name: string;
-                                isFavorite: boolean;
                                 /** @enum {string} */
                                 method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                                 methodOther: string | null;
@@ -1204,8 +1203,6 @@ export interface paths {
                 content: {
                     "application/json": {
                         name: string;
-                        /** @default false */
-                        isFavorite?: boolean;
                         /** @enum {string} */
                         method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                         /** @default null */
@@ -1237,7 +1234,6 @@ export interface paths {
                         "application/json": {
                             id: string;
                             name: string;
-                            isFavorite: boolean;
                             /** @enum {string} */
                             method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                             methodOther: string | null;
@@ -1336,7 +1332,6 @@ export interface paths {
                         "application/json": {
                             id: string;
                             name: string;
-                            isFavorite: boolean;
                             /** @enum {string} */
                             method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                             methodOther: string | null;
@@ -1459,7 +1454,6 @@ export interface paths {
                 content: {
                     "application/json": {
                         name?: string;
-                        isFavorite?: boolean;
                         /** @enum {string} */
                         method?: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                         methodOther?: string | null;
@@ -1483,7 +1477,6 @@ export interface paths {
                         "application/json": {
                             id: string;
                             name: string;
-                            isFavorite: boolean;
                             /** @enum {string} */
                             method: "v60" | "aeropress" | "espresso" | "chemex" | "french_press" | "moka" | "cold_brew" | "other";
                             methodOther: string | null;

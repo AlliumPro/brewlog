@@ -23,12 +23,6 @@
   text-decoration: none;
 }
 
-.actions {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
 @media (width >= 48rem) {
   .inner {
     padding-inline: var(--space-8);

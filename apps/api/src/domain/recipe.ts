@@ -8,7 +8,6 @@ import { brewMethodSchema } from './brew.js';
  */
 const recipeFields = {
   name: z.string().trim().min(1).max(80),
-  isFavorite: z.boolean(),
   method: brewMethodSchema,
   methodOther: z.string().trim().min(1).max(40).nullable(),
   beanName: z.string().trim().min(1).max(120).nullable(),
@@ -23,7 +22,6 @@ const recipeFields = {
 export const recipeCreateSchema = z
   .object({
     ...recipeFields,
-    isFavorite: recipeFields.isFavorite.default(false),
     methodOther: recipeFields.methodOther.default(null),
     beanName: recipeFields.beanName.default(null),
     roaster: recipeFields.roaster.default(null),
@@ -47,7 +45,6 @@ export const recipeSchema = z
   .object({
     id: z.string(),
     name: z.string(),
-    isFavorite: z.boolean(),
     method: brewMethodSchema,
     methodOther: z.string().nullable(),
     beanName: z.string().nullable(),

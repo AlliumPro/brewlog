@@ -18,6 +18,11 @@ html {
      target and understands only the prefixed form; the unprefixed line below covers the rest */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  /* The space for the scrollbar is always reserved. Radix locks scrolling when it opens a
+     select or a dialog, which removes the scrollbar — and without a reserved gutter every
+     centred block jumps sideways at that moment. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -58,6 +63,28 @@ textarea,
 select {
   font: inherit;
   color: inherit;
+}
+
+/**
+ * Form controls carry an intrinsic width — an input is about 20 characters wide by default —
+ * and a flex or grid child refuses to shrink below its content. Together that pushes fields
+ * past the edge of a narrow screen. Both defaults are cancelled here rather than in every
+ * component that happens to contain a field.
+ */
+input,
+textarea,
+select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/**
+ * A fieldset defaults to min-inline-size: min-content, which no other element does. Inside a
+ * column layout that makes the whole group as wide as its widest child and immovable — the
+ * single largest cause of horizontal overflow in forms.
+ */
+fieldset {
+  min-inline-size: 0;
 }
 
 button {
