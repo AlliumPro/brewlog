@@ -1,0 +1,64 @@
+.bar {
+  position: fixed;
+  inset-inline: 0;
+
+  /* Sits above the home indicator rather than under it */
+  bottom: calc(var(--space-4) + var(--safe-bottom));
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count), minmax(5rem, 1fr));
+  padding: var(--space-1);
+  pointer-events: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+}
+
+/* One pill that moves, rather than a background on each segment: the movement is what makes
+   three links read as a single switch. */
+.pill {
+  position: absolute;
+  inset-block: var(--space-1);
+  left: var(--space-1);
+  width: calc((100% - var(--space-2)) / var(--count));
+  background: var(--gradient-accent);
+  border-radius: var(--radius-full);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform var(--duration-normal) var(--easing-standard);
+}
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* 44px minimum: the width of a fingertip, not a design preference */
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  text-decoration: none;
+  border-radius: var(--radius-full);
+}
+
+.itemActive {
+  composes: item;
+  font-weight: 500;
+  color: var(--color-accent-contrast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill {
+    transition: none;
+  }
+}

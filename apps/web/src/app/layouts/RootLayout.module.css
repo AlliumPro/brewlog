@@ -1,9 +1,10 @@
 .main {
   max-width: var(--layout-max-width);
 
-  /* The bottom pad clears the home indicator on a phone in standalone; --safe-bottom is 0
-     everywhere else, so this costs nothing on desktop. */
-  padding: var(--space-8) var(--space-4) calc(var(--space-16) + var(--safe-bottom));
+  /* The bottom pad clears the floating nav bar and, on a phone in standalone, the home
+     indicator underneath it. Without it the last card sits behind the bar. */
+  padding: var(--space-8) var(--space-4)
+    calc(var(--space-16) + var(--space-10) + var(--safe-bottom));
   margin-inline: auto;
 }
 
