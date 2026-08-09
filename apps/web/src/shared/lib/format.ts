@@ -30,6 +30,50 @@ export function parseBrewTime(value: string): number | null {
   return minutes * 60 + seconds;
 }
 
+/**
+ * Live preview of extraction yield while the form is being filled.
+ *
+ * Deliberately mirrors computeExtraction in apps/api — the server stays authoritative and
+ * recomputes on save, this only avoids a round trip per keystroke. The two are kept honest by
+ * tests on both sides asserting the same worked examples; a shared contracts package would be
+ * the real fix and is noted in the ADR.
+ */
+const RETAINED_WATER_PER_GRAM = 2;
+
+export function extractionPreview(input: {
+  tdsPercent: number | null;
+  doseGrams: number;
+  waterMl: number;
+  isEspresso: boolean;
+}): number | null {
+  const { tdsPercent, doseGrams, waterMl, isEspresso } = input;
+
+  if (tdsPercent === null || !Number.isFinite(tdsPercent) || doseGrams <= 0) {
+    return null;
+  }
+
+  const beverageGrams = isEspresso ? waterMl : waterMl - doseGrams * RETAINED_WATER_PER_GRAM;
+
+  if (!Number.isFinite(beverageGrams) || beverageGrams <= 0) {
+    return null;
+  }
+
+  return Math.round(((tdsPercent * beverageGrams) / doseGrams) * 10) / 10;
+}
+
+export function formatExtraction(percent: number): string {
+  return `${percent.toFixed(1)}%`;
+}
+
+/** 18–22% is the band most filter brews taste balanced in. */
+export function extractionVerdict(percent: number): 'under' | 'ideal' | 'over' {
+  if (percent < 18) {
+    return 'under';
+  }
+
+  return percent > 22 ? 'over' : 'ideal';
+}
+
 export function formatTemperature(celsius: number): string {
   return `${String(Math.round(celsius))}°C`;
 }

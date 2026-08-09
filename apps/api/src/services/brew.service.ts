@@ -14,6 +14,40 @@ function computeRatio(waterMl: number, doseGrams: number): number {
   return Math.round((waterMl / doseGrams) * 10) / 10;
 }
 
+/**
+ * Water a wet coffee bed keeps, in grams per gram of dry coffee. The usual working figure for
+ * anything brewed through a bed; it is an approximation, and the extraction figure inherits
+ * that. Measuring the beverage on a scale would be exact, but that is a second field and a
+ * second thing to remember at the bar.
+ */
+const RETAINED_WATER_PER_GRAM = 2;
+
+/**
+ * Extraction yield: the share of the dry coffee that ended up dissolved in the cup.
+ *
+ *   EY% = TDS% × beverage mass / dose
+ *
+ * The beverage is not the water poured — the bed keeps roughly two grams per gram of coffee.
+ * Espresso is the exception: its recorded millilitres are the shot itself, not the water that
+ * went in, so nothing is subtracted. Filter lands near 18–22% when it tastes right.
+ */
+function computeExtraction(row: BrewRow): number | null {
+  if (row.tdsPercent === null || row.doseGrams <= 0) {
+    return null;
+  }
+
+  const beverageGrams =
+    row.method === 'espresso' ? row.waterMl : row.waterMl - row.doseGrams * RETAINED_WATER_PER_GRAM;
+
+  if (beverageGrams <= 0) {
+    // More coffee than water: the numbers cannot describe a real brew, so no figure is better
+    // than a confident wrong one.
+    return null;
+  }
+
+  return Math.round(((row.tdsPercent * beverageGrams) / row.doseGrams) * 10) / 10;
+}
+
 function computeDaysAfterRoast(roastDate: string | null, brewedAt: string): number | null {
   if (roastDate === null) {
     return null;
@@ -45,6 +79,8 @@ export function toBrew(row: BrewRow): Brew {
     brewTimeSeconds: row.brewTimeSeconds,
     notes: row.notes,
     rating: row.rating,
+    tdsPercent: row.tdsPercent,
+    extractionPercent: computeExtraction(row),
     ratio: computeRatio(row.waterMl, row.doseGrams),
     daysAfterRoast: computeDaysAfterRoast(row.roastDate, row.brewedAt),
     photoUrl: row.photoPath === null ? null : `/api/brews/${row.id}/photo`,
@@ -107,6 +143,7 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
         brewTimeSeconds: patch.brewTimeSeconds ?? existing.brewTimeSeconds,
         notes: patch.notes === undefined ? existing.notes : patch.notes,
         rating: patch.rating ?? existing.rating,
+        tdsPercent: patch.tdsPercent === undefined ? existing.tdsPercent : patch.tdsPercent,
         brewedAt: patch.brewedAt ?? existing.brewedAt,
       };
 

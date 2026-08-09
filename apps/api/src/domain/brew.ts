@@ -36,6 +36,12 @@ const brewFields = {
   brewTimeSeconds: z.number().int().min(1).max(3600),
   notes: z.string().trim().max(2000).nullable(),
   rating: z.number().int().min(1).max(5),
+  /**
+   * Total dissolved solids, read off a refractometer. Filter sits near 1.2–1.6%, espresso
+   * near 8–12%; the bounds are wide enough for both and for a misread decimal to still be
+   * rejected.
+   */
+  tdsPercent: z.number().min(0.01).max(20).nullable(),
   brewedAt: z.iso.datetime(),
 };
 
@@ -91,6 +97,7 @@ export const brewCreateSchema = z
     roaster: brewFields.roaster.default(null),
     roastDate: brewFields.roastDate.default(null),
     notes: brewFields.notes.default(null),
+    tdsPercent: brewFields.tdsPercent.default(null),
     // Defaults to "now", filled in after parsing so the invariants see a concrete value.
     brewedAt: brewFields.brewedAt.optional(),
   })
@@ -127,6 +134,11 @@ export const brewSchema = z
     brewTimeSeconds: z.number().int(),
     notes: z.string().nullable(),
     rating: z.number().int(),
+    tdsPercent: z.number().nullable(),
+    extractionPercent: z
+      .number()
+      .nullable()
+      .describe('Extraction yield, computed from TDS, dose and beverage mass'),
     ratio: z.number().describe('waterMl / doseGrams, computed — never stored'),
     daysAfterRoast: z
       .number()

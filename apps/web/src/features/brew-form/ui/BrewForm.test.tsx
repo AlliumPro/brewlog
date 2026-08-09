@@ -73,6 +73,36 @@ describe('BrewForm', () => {
     });
   });
 
+  it('leaves TDS empty rather than recording zero when nothing was measured', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    renderWithProviders(<BrewForm submitLabel="Save" onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText('Bean'), 'Kieni AA');
+    await user.type(screen.getByLabelText('Grind'), 'medium');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    // Number(null) is 0, and a TDS of zero would be a measurement nobody took.
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ tdsPercent: null });
+  });
+
+  it('shows extraction as soon as a TDS reading is entered', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<BrewForm submitLabel="Save" onSubmit={vi.fn()} />);
+
+    expect(screen.queryByText(/extraction/i)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('TDS (%)'), '1.35');
+
+    // Defaults are 15 g and 250 ml: 1.35% × 220 / 15 = 19.8%
+    expect(await screen.findByText('19.8%')).toBeInTheDocument();
+    expect(screen.getByText(/18–22% band/)).toBeInTheDocument();
+  });
+
   it('asks for the method name only when the method is "other"', async () => {
     const user = userEvent.setup();
     renderWithProviders(<BrewForm submitLabel="Save" onSubmit={vi.fn()} />);

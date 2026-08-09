@@ -20,6 +20,8 @@ const brew: Brew = {
   brewTimeSeconds: 165,
   notes: 'blackcurrant',
   rating: 4,
+  tdsPercent: 1.35,
+  extractionPercent: 19.8,
   ratio: 16.7,
   daysAfterRoast: 8,
   photoUrl: null,

@@ -330,6 +330,9 @@ export interface paths {
                                 brewTimeSeconds: number;
                                 notes: string | null;
                                 rating: number;
+                                tdsPercent: number | null;
+                                /** @description Extraction yield, computed from TDS, dose and beverage mass */
+                                extractionPercent: number | null;
                                 /** @description waterMl / doseGrams, computed — never stored */
                                 ratio: number;
                                 /** @description Whole days between roastDate and brewedAt, computed */
@@ -411,6 +414,8 @@ export interface paths {
                         /** @default null */
                         notes?: string | null;
                         rating: number;
+                        /** @default null */
+                        tdsPercent?: number | null;
                         /** Format: date-time */
                         brewedAt?: string;
                     };
@@ -438,6 +443,9 @@ export interface paths {
                             brewTimeSeconds: number;
                             notes: string | null;
                             rating: number;
+                            tdsPercent: number | null;
+                            /** @description Extraction yield, computed from TDS, dose and beverage mass */
+                            extractionPercent: number | null;
                             /** @description waterMl / doseGrams, computed — never stored */
                             ratio: number;
                             /** @description Whole days between roastDate and brewedAt, computed */
@@ -530,6 +538,9 @@ export interface paths {
                             brewTimeSeconds: number;
                             notes: string | null;
                             rating: number;
+                            tdsPercent: number | null;
+                            /** @description Extraction yield, computed from TDS, dose and beverage mass */
+                            extractionPercent: number | null;
                             /** @description waterMl / doseGrams, computed — never stored */
                             ratio: number;
                             /** @description Whole days between roastDate and brewedAt, computed */
@@ -663,6 +674,7 @@ export interface paths {
                         brewTimeSeconds?: number;
                         notes?: string | null;
                         rating?: number;
+                        tdsPercent?: number | null;
                         /** Format: date-time */
                         brewedAt?: string;
                     };
@@ -690,6 +702,9 @@ export interface paths {
                             brewTimeSeconds: number;
                             notes: string | null;
                             rating: number;
+                            tdsPercent: number | null;
+                            /** @description Extraction yield, computed from TDS, dose and beverage mass */
+                            extractionPercent: number | null;
                             /** @description waterMl / doseGrams, computed — never stored */
                             ratio: number;
                             /** @description Whole days between roastDate and brewedAt, computed */
@@ -855,6 +870,9 @@ export interface paths {
                             brewTimeSeconds: number;
                             notes: string | null;
                             rating: number;
+                            tdsPercent: number | null;
+                            /** @description Extraction yield, computed from TDS, dose and beverage mass */
+                            extractionPercent: number | null;
                             /** @description waterMl / doseGrams, computed — never stored */
                             ratio: number;
                             /** @description Whole days between roastDate and brewedAt, computed */

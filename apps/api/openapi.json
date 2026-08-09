@@ -537,6 +537,15 @@
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
                           },
+                          "tdsPercent": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "extractionPercent": {
+                            "nullable": true,
+                            "description": "Extraction yield, computed from TDS, dose and beverage mass",
+                            "type": "number"
+                          },
                           "ratio": {
                             "type": "number",
                             "description": "waterMl / doseGrams, computed — never stored"
@@ -577,6 +586,8 @@
                           "brewTimeSeconds",
                           "notes",
                           "rating",
+                          "tdsPercent",
+                          "extractionPercent",
                           "ratio",
                           "daysAfterRoast",
                           "photoUrl",
@@ -763,6 +774,13 @@
                     "minimum": 1,
                     "maximum": 5
                   },
+                  "tdsPercent": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 20
+                  },
                   "brewedAt": {
                     "type": "string",
                     "format": "date-time",
@@ -849,6 +867,15 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "tdsPercent": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "extractionPercent": {
+                      "nullable": true,
+                      "description": "Extraction yield, computed from TDS, dose and beverage mass",
+                      "type": "number"
+                    },
                     "ratio": {
                       "type": "number",
                       "description": "waterMl / doseGrams, computed — never stored"
@@ -889,6 +916,8 @@
                     "brewTimeSeconds",
                     "notes",
                     "rating",
+                    "tdsPercent",
+                    "extractionPercent",
                     "ratio",
                     "daysAfterRoast",
                     "photoUrl",
@@ -1058,6 +1087,15 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "tdsPercent": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "extractionPercent": {
+                      "nullable": true,
+                      "description": "Extraction yield, computed from TDS, dose and beverage mass",
+                      "type": "number"
+                    },
                     "ratio": {
                       "type": "number",
                       "description": "waterMl / doseGrams, computed — never stored"
@@ -1098,6 +1136,8 @@
                     "brewTimeSeconds",
                     "notes",
                     "rating",
+                    "tdsPercent",
+                    "extractionPercent",
                     "ratio",
                     "daysAfterRoast",
                     "photoUrl",
@@ -1266,6 +1306,12 @@
                     "minimum": 1,
                     "maximum": 5
                   },
+                  "tdsPercent": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 20
+                  },
                   "brewedAt": {
                     "type": "string",
                     "format": "date-time",
@@ -1355,6 +1401,15 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "tdsPercent": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "extractionPercent": {
+                      "nullable": true,
+                      "description": "Extraction yield, computed from TDS, dose and beverage mass",
+                      "type": "number"
+                    },
                     "ratio": {
                       "type": "number",
                       "description": "waterMl / doseGrams, computed — never stored"
@@ -1395,6 +1450,8 @@
                     "brewTimeSeconds",
                     "notes",
                     "rating",
+                    "tdsPercent",
+                    "extractionPercent",
                     "ratio",
                     "daysAfterRoast",
                     "photoUrl",
@@ -1704,6 +1761,15 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "tdsPercent": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "extractionPercent": {
+                      "nullable": true,
+                      "description": "Extraction yield, computed from TDS, dose and beverage mass",
+                      "type": "number"
+                    },
                     "ratio": {
                       "type": "number",
                       "description": "waterMl / doseGrams, computed — never stored"
@@ -1744,6 +1810,8 @@
                     "brewTimeSeconds",
                     "notes",
                     "rating",
+                    "tdsPercent",
+                    "extractionPercent",
                     "ratio",
                     "daysAfterRoast",
                     "photoUrl",

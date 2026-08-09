@@ -39,6 +39,12 @@ export const brewFormSchema = z
     brewTime: z.string().refine((value) => parseBrewTime(value) !== null, 'Use mm:ss, like 2:45'),
     notes: z.string().trim().max(2000),
     rating: z.number().int().min(1, 'Give it a score').max(5),
+    // Optional: not everyone has a refractometer on the bar. Empty input becomes null.
+    tdsPercent: z
+      .number()
+      .min(0.01, 'TDS is a percentage, around 1.4 for filter')
+      .max(20, 'That reads like a misplaced decimal')
+      .nullable(),
   })
   .superRefine((value, ctx) => {
     if (value.method === 'other' && value.methodOther === '') {
@@ -72,6 +78,7 @@ export function toApiInput(values: BrewFormValues): BrewCreateInput {
     brewTimeSeconds,
     notes: values.notes === '' ? null : values.notes,
     rating: values.rating,
+    tdsPercent: values.tdsPercent,
   };
 }
 
@@ -88,4 +95,5 @@ export const emptyBrewForm: BrewFormValues = {
   brewTime: '2:45',
   notes: '',
   rating: 3,
+  tdsPercent: null,
 };
