@@ -4,6 +4,7 @@ import { useLogoutMutation } from '@/features/auth';
 import { Button } from '@/shared/ui';
 
 import styles from './AppHeader.module.css';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 export function AppHeader() {
   const [logout, { isLoading }] = useLogoutMutation();
@@ -37,6 +38,8 @@ export function AppHeader() {
             Log a brew
           </NavLink>
         </nav>
+
+        <ThemeSwitcher />
 
         <Button
           variant="ghost"

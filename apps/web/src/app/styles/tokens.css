@@ -2,38 +2,71 @@
  * The single place raw values are allowed to exist. Everything else references these tokens —
  * stylelint enforces that with color-no-hex outside this file.
  *
- * Palette: warm dark, terracotta accent. Contrast of every text token against --color-bg and
- * --color-surface is >= 4.5:1; recheck with a contrast tool before changing any value.
+ * Two themes from one set of declarations: light-dark() reads the used colour scheme, so the
+ * system preference and an explicit choice both flow through the same token.
+ *
+ * There are no plain-value fallbacks. light-dark() has been available in every engine since
+ * May 2026, and SPEC.md commits only to the last two versions of each browser. A fallback on
+ * some tokens and not others is worse than none: it produces a half-styled page instead of an
+ * obviously broken one. Widen the support target and this decision has to be revisited.
+ *
+ * Colours are written in OKLCH because its lightness matches perceived lightness: a step of
+ * 0.05 in L looks like the same step everywhere, which is what makes contrast predictable.
+ * Every text pair below is verified by scripts/contrast.js, run as part of npm run verify.
  */
 :root {
-  /* Surfaces — warm graphite, deliberately not pure black */
-  --color-bg: #14110e;
-  --color-surface: #1e1a16;
-  --color-surface-raised: #29231d;
-  --color-border: #3a322a;
-  --color-border-strong: #4d4238;
+  /* Both schemes are supported; the browser picks from the user's setting */
+  color-scheme: light dark;
 
-  /* Text */
-  --color-text: #f2eae0;
-  --color-text-muted: #b5a899;
-  --color-text-faint: #8a7f72;
+  /* ---- Brand ----------------------------------------------------------------------
+     The two given accents: #BFF1E1 mint and #DA8FDD orchid. Identical in both themes —
+     a brand colour that changes with the theme stops being a brand colour. */
+  --color-accent-from: oklch(91.9% 0.056 173.5deg);
+  --color-accent-to: oklch(75.2% 0.136 325.5deg);
+  --gradient-accent: linear-gradient(110deg, var(--color-accent-from), var(--color-accent-to));
 
-  /* Accents — fired clay and cinnamon */
-  --color-accent: #c9683f;
-  --color-accent-hover: #d9784e;
-  --color-accent-deep: #a85a3c;
-  --color-accent-contrast: #14110e;
+  /* Text on the gradient is always dark: white on the orchid gives 2.35:1, which fails.
+     Dark ink gives 15.4:1 on the mint end and 8.2:1 on the orchid end. */
+  --color-accent-contrast: oklch(16% 0.012 300deg);
 
-  /* Secondary accent for charts */
-  --color-olive: #7e8b5a;
-  --color-olive-hover: #8f9c68;
+  /* Solid accent for surfaces that cannot take a gradient */
+  --color-accent: light-dark(oklch(75.2% 0.136 325.5deg), oklch(80% 0.11 325.5deg));
+  --color-accent-hover: light-dark(oklch(79% 0.12 325.5deg), oklch(85% 0.09 325.5deg));
+  --color-accent-deep: light-dark(oklch(62% 0.15 325.5deg), oklch(68% 0.14 325.5deg));
 
-  /* Status */
-  --color-danger: #d4634f;
-  --color-success: #7e8b5a;
+  /* Accent used as text or a thin line needs far more contrast than accent used as a fill */
+  --color-accent-text: light-dark(oklch(50% 0.16 325.5deg), oklch(85% 0.09 325.5deg));
 
-  /* Typography — serif with character for headings and hero numbers,
-     clean grotesque for body and forms */
+  /* Second accent for charts: the mint end, deepened enough to read on light */
+  --color-accent-alt: light-dark(oklch(58% 0.09 173.5deg), oklch(85% 0.07 173.5deg));
+
+  /* ---- Surfaces --------------------------------------------------------------------
+     Chroma stays under 0.02: any more and large areas take on a colour cast. The hue is
+     held near the accents so the greys read as part of the same family, not as default grey. */
+  --color-bg: light-dark(oklch(98.5% 0.004 320deg), oklch(16.5% 0.012 320deg));
+  --color-surface: light-dark(oklch(100% 0 0deg), oklch(21.5% 0.014 320deg));
+  --color-surface-raised: light-dark(oklch(100% 0 0deg), oklch(26.5% 0.016 320deg));
+
+  /* Decorative only — separators and card outlines. WCAG sets no contrast floor for these,
+     and forcing 3:1 on them would draw heavy grey boxes around every card. */
+  --color-border: light-dark(oklch(90.5% 0.008 320deg), oklch(31.5% 0.016 320deg));
+
+  /* The visible boundary of an interactive control: inputs, selects, chips. This one is
+     covered by WCAG 1.4.11 and must clear 3:1 against whatever sits behind it. */
+  --color-border-strong: light-dark(oklch(60% 0.022 320deg), oklch(53% 0.026 320deg));
+
+  /* ---- Text ------------------------------------------------------------------------
+     Dark theme text is 0.95, not pure white: white on a dark field glares and smears. */
+  --color-text: light-dark(oklch(22% 0.02 320deg), oklch(95% 0.008 320deg));
+  --color-text-muted: light-dark(oklch(47% 0.02 320deg), oklch(76% 0.012 320deg));
+  --color-text-faint: light-dark(oklch(53% 0.018 320deg), oklch(63% 0.012 320deg));
+
+  /* ---- Status ---------------------------------------------------------------------- */
+  --color-danger: light-dark(oklch(53% 0.19 25deg), oklch(72% 0.16 25deg));
+  --color-success: light-dark(oklch(50% 0.12 155deg), oklch(78% 0.1 160deg));
+
+  /* ---- Typography ------------------------------------------------------------------
+     Serif with character for headings and hero numbers, clean grotesque for body and forms */
   --font-display: 'Fraunces Variable', georgia, serif;
   --font-body: 'Inter Variable', system-ui, sans-serif;
 
@@ -50,7 +83,7 @@
   --leading-normal: 1.5;
   --leading-relaxed: 1.7;
 
-  /* Spacing — 4px scale, no values outside it */
+  /* ---- Spacing — 4px scale, no values outside it ----------------------------------- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -62,26 +95,43 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  /* Radii */
+  /* ---- Radii ----------------------------------------------------------------------- */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-full: 999px;
 
-  /* Elevation — soft and warm, never a hard grey drop shadow */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
-  --shadow-md: 0 4px 12px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 12px 32px rgb(0 0 0 / 50%);
+  /* ---- Elevation -------------------------------------------------------------------
+     In the dark theme a shadow is invisible, so height is carried by a lighter surface
+     instead; the shadows below are therefore much softer there. */
+  --shadow-sm: light-dark(0 1px 2px rgb(0 0 0 / 8%), 0 1px 2px rgb(0 0 0 / 40%));
+  --shadow-md: light-dark(0 4px 12px rgb(0 0 0 / 10%), 0 4px 12px rgb(0 0 0 / 45%));
+  --shadow-lg: light-dark(0 12px 32px rgb(0 0 0 / 14%), 0 12px 32px rgb(0 0 0 / 55%));
 
-  /* Motion */
+  /* ---- Motion ---------------------------------------------------------------------- */
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --easing-standard: cubic-bezier(0.2, 0, 0.2, 1);
 
-  /* Layout */
+  /* ---- Layout ---------------------------------------------------------------------- */
   --layout-max-width: 56rem;
-  --focus-ring: 2px solid var(--color-accent-hover);
+  --focus-ring: 2px solid var(--color-accent-text);
   --focus-offset: 2px;
+
+  /* Safe areas: zero everywhere except iOS in standalone. Declared here so components can
+     use them unconditionally. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* An explicit choice overrides the system setting in both directions. Nothing else needs to
+   change: light-dark() resolves against whatever color-scheme ends up in effect. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {

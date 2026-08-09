@@ -67,7 +67,9 @@ button {
 }
 
 a {
-  color: var(--color-accent-hover);
+  /* The text variant, not the fill variant: a link is thin strokes on the page background
+     and needs far more contrast than a filled button does. */
+  color: var(--color-accent-text);
 }
 
 /* Focus must always be visible. Removing this outline is not an option anywhere. */

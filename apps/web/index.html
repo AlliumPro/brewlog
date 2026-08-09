@@ -2,11 +2,39 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Private journal behind a password gate: never index it. -->
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="color-scheme" content="dark" />
+    <!-- Both schemes are supported; form controls and scrollbars follow the active one. -->
+    <meta name="color-scheme" content="light dark" />
+    <!-- Content is set by the script below before first paint, then kept in sync by useTheme. -->
+    <meta name="theme-color" content="#fbf9fc" />
     <title>BrewLog</title>
+    <script>
+      /**
+       * Synchronous and inline on purpose. React mounts after the first paint, so reading the
+       * stored choice from a component would let the wrong theme flash first. Under CSP this
+       * script is allowed by its hash, never by 'unsafe-inline'.
+       *
+       * The two colours mirror --color-bg in tokens.css.
+       */
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.dataset.theme = stored;
+          }
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute('content', dark ? '#110d12' : '#fbf9fc');
+        } catch (e) {
+          /* blocked storage: fall through to the system preference */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
