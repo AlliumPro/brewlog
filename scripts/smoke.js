@@ -66,6 +66,40 @@ async function main() {
   const guarded = await status('/api/brews');
   report('API is closed without a session', guarded.status === 401);
 
+  // The manifest and the worker are what make the app installable; a 404 on either turns the
+  // PWA back into a website without any other symptom.
+  const manifest = await status('/manifest.webmanifest');
+  const manifestBody = manifest.status === 200 ? await manifest.json() : undefined;
+
+  report(
+    'manifest is served and names the app',
+    manifest.status === 200 && typeof manifestBody?.name === 'string',
+  );
+  report(
+    'manifest has a maskable icon',
+    Array.isArray(manifestBody?.icons) &&
+      manifestBody.icons.some((icon) => icon.purpose === 'maskable'),
+    'without one Android crops the glyph away',
+  );
+
+  const worker = await status('/sw.js');
+  report(
+    'service worker is served as JavaScript',
+    worker.status === 200 && (worker.headers.get('content-type') ?? '').includes('javascript'),
+  );
+
+  // The theme applier is inline and must run before first paint. Under script-src 'self' the
+  // browser refuses it and the wrong theme flashes — with nothing failing anywhere else.
+  const csp = root.headers.get('content-security-policy') ?? '';
+  const scriptSrc = /(?:^|;)\s*script-src ([^;]*)/.exec(csp)?.[1] ?? '';
+
+  report(
+    'CSP admits the inline theme script by hash',
+    scriptSrc.includes('sha256-') && !scriptSrc.includes('unsafe-inline'),
+    scriptSrc.trim(),
+  );
+  report('CSP allows the service worker to register', csp.includes('worker-src'));
+
   if (docsUser !== undefined && docsPassword !== undefined) {
     const docsAnon = await status('/docs/json');
     report('docs closed without basic auth', docsAnon.status === 401);

@@ -1,6 +1,9 @@
 .main {
   max-width: var(--layout-max-width);
-  padding: var(--space-8) var(--space-4) var(--space-16);
+
+  /* The bottom pad clears the home indicator on a phone in standalone; --safe-bottom is 0
+     everywhere else, so this costs nothing on desktop. */
+  padding: var(--space-8) var(--space-4) calc(var(--space-16) + var(--safe-bottom));
   margin-inline: auto;
 }
 

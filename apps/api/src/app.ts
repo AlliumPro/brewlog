@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 
@@ -42,6 +44,32 @@ export type App = FastifyInstance<
 >;
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/**
+ * The page carries one inline script: the theme applier, which has to run before first paint
+ * and therefore cannot be an external module. Under `script-src 'self'` the browser refuses
+ * it, and the theme flashes.
+ *
+ * The hash is computed from the file this server actually serves, so it cannot drift from the
+ * script the way a value pasted into the config would. `'unsafe-inline'` would solve the same
+ * problem by disabling the protection.
+ */
+function inlineScriptHashes(staticDir: string): string[] {
+  const html = readFileSync(resolve(staticDir, 'index.html'), 'utf8');
+  const hashes: string[] = [];
+
+  for (const match of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+    const body = match[1];
+
+    if (body === undefined || body.trim() === '') {
+      continue;
+    }
+
+    hashes.push(`'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
+  }
+
+  return hashes;
+}
 
 export interface BuildAppOptions {
   env: Env;
@@ -143,13 +171,15 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
   const statsService = createStatsService(statsRepository);
   const authService = createAuthService(sessionRepository, env.AUTH_PASSWORD_HASH);
 
+  const scriptHashes = env.STATIC_DIR === undefined ? [] : inlineScriptHashes(env.STATIC_DIR);
+
   await app.register(helmet, {
     // The SPA is served from the same origin in production; scripts and styles are bundled
     // assets, and no third-party host is contacted at runtime.
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", ...scriptHashes],
         // Stylesheets themselves are bundled files, so no inline <style> is allowed.
         styleSrc: ["'self'"],
         // Radix primitives position their popovers by writing to the element's style
@@ -159,6 +189,9 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
         imgSrc: ["'self'", 'data:'],
         fontSrc: ["'self'"],
         connectSrc: ["'self'"],
+        // The service worker is same-origin; without this the browser refuses to register it
+        workerSrc: ["'self'"],
+        manifestSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
         baseUri: ["'self'"],

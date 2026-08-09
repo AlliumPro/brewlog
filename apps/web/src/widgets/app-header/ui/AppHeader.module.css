@@ -1,4 +1,7 @@
 .header {
+  /* In standalone the page runs under the status bar, so the header owes it that much room —
+     the notch and the Dynamic Island are the same inset, only different sizes. */
+  padding-top: var(--safe-top);
   border-bottom: 1px solid var(--color-border);
 }
 

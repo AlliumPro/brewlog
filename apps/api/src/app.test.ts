@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { App } from './app.js';
 import { loadEnv } from './config/env.js';
-import { createTestApp } from './test/helpers.js';
+import { createTestApp, TEST_INLINE_SCRIPT } from './test/helpers.js';
 import type { TestContext } from './test/helpers.js';
 
 describe('app', () => {
@@ -109,6 +111,30 @@ describe('serving the built SPA', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('<div id="root">');
+  });
+
+  it('allows the page its own inline script by hash, not by unsafe-inline', async () => {
+    const response = await context.app.inject({ method: 'GET', url: '/' });
+    const csp = response.headers['content-security-policy'];
+    const expected = createHash('sha256').update(TEST_INLINE_SCRIPT, 'utf8').digest('base64');
+
+    expect(csp).toContain(`'sha256-${expected}'`);
+
+    // The whole point of hashing it: the escape hatch stays closed for scripts. It is open
+    // for style *attributes* on purpose — Radix positions popovers by writing to them — and
+    // asserting on the whole header would conflate the two.
+    const scriptSrc = /(?:^|;)\s*script-src ([^;]*)/.exec(csp ?? '')?.[1];
+
+    expect(scriptSrc).toBeDefined();
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+  });
+
+  it('lets the service worker and the manifest load', async () => {
+    const response = await context.app.inject({ method: 'GET', url: '/' });
+    const csp = response.headers['content-security-policy'];
+
+    expect(csp).toContain('worker-src');
+    expect(csp).toContain('manifest-src');
   });
 
   it('still answers unknown API paths with the JSON envelope, not HTML', async () => {

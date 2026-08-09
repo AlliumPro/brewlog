@@ -6,10 +6,12 @@ import { Skeleton } from '@/shared/ui';
 import { AppHeader } from '@/widgets/app-header';
 
 import styles from './RootLayout.module.css';
+import { UpdatePrompt } from './UpdatePrompt';
 
 export function RootLayout() {
   return (
     <RequireSession>
+      <UpdatePrompt />
       <a className={styles.skipLink} href="#main">
         Skip to content
       </a>

@@ -9,6 +9,13 @@
     <meta name="color-scheme" content="light dark" />
     <!-- Content is set by the script below before first paint, then kept in sync by useTheme. -->
     <meta name="theme-color" content="#fbf9fc" />
+    <!-- iOS ignores the manifest icon for the home screen and uses this one. -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- black-translucent lets the page run under the status bar; the safe-area insets in
+         tokens.css are what keep content out from under the notch or Dynamic Island. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BrewLog" />
     <title>BrewLog</title>
     <script>
       /**
