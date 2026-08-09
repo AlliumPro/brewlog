@@ -65,7 +65,7 @@ jobs:
       # Built but not pushed: a pull request proves the image still assembles without
       # publishing anything.
       - name: Build the image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
