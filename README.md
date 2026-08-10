@@ -1,5 +1,8 @@
 # BrewLog
 
+Live at **https://brewlog.duckdns.org**. Every push to `main` deploys itself; see
+[docs/RUNBOOK.md](docs/RUNBOOK.md) for the host, rollback and backups.
+
 A personal specialty coffee brewing journal. Record the parameters of a brew — method, bean,
 grind, dose, water, temperature, time — rate the result, and look back later to see which
 parameters reliably produce a better cup.

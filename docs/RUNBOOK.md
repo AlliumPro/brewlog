@@ -64,41 +64,58 @@ docker compose exec app node -e "const D=require('better-sqlite3');new D('/data/
 
 ## Backup and restore
 
-The whole application state is one file plus a directory of photos.
+`/usr/local/bin/brewlog-backup` runs on the host daily at 03:17 and keeps seven days in
+`/opt/brewlog/backups`.
+
+It uses `VACUUM INTO` rather than copying the file: a copy of a live database can catch it
+mid-transaction. It reads the Docker volume directly rather than going through the application
+image, because that image is private and the host is logged out of the registry between
+deploys — a backup must not depend on registry access.
 
 ```bash
-# back up (SQLite's own backup is consistent even while the app is running)
-docker compose exec app sh -c "sqlite3 /data/brewlog.db '.backup /data/backup.db'" 2>/dev/null \
-  || docker compose stop app   # no sqlite3 in the image: stop the app and copy the file instead
-
-docker run --rm -v brewlog_brewlog-data:/data -v "$PWD:/out" alpine \
-  tar czf /out/brewlog-backup-$(date +%F).tar.gz -C /data .
-
-docker compose start app
+ssh root@95.182.88.29
+/usr/local/bin/brewlog-backup          # run one now
+ls -lh /opt/brewlog/backups
 ```
+
+Restoring replaces the current data, so copy it aside first:
 
 ```bash
-# restore — this replaces the current data, so take a copy of it first
-docker compose stop app
-docker run --rm -v brewlog_brewlog-data:/data -v "$PWD:/in" alpine \
-  sh -c "rm -rf /data/* && tar xzf /in/brewlog-backup-2026-08-08.tar.gz -C /data"
-docker compose start app
+ssh root@95.182.88.29
+cd /opt/brewlog
+docker compose down
+VOL=$(docker volume inspect brewlog_brewlog-data --format '{{.Mountpoint}}')
+cp "$VOL/brewlog.db" "$VOL/brewlog.db.before-restore"
+gunzip -c backups/brewlog-<stamp>.db.gz > "$VOL/brewlog.db"
+# The WAL files describe the replaced database and must not outlive it
+rm -f "$VOL/brewlog.db-wal" "$VOL/brewlog.db-shm"
+docker compose up -d
+curl -fsS localhost:3000/ready
 ```
 
-Restoring has never been rehearsed on this project. Do it once, deliberately, before trusting it —
-an untested backup is a guess.
+**Rehearsed on 2026-08-10**: a snapshot was taken, unzipped and read back — five tables
+present. Photos are not in these snapshots; they live in the same volume and are covered by a
+volume-level copy, which has not been rehearsed.
 
 ## Rolling back
 
-Locally the image is built from the working tree, so rolling back is a git operation:
+The tag now running is in `/opt/brewlog/.env`, and every image deployed in the last week is
+still on the host.
 
 ```bash
-git checkout <previous-tag>
-docker compose up -d --build
+ssh deploy@95.182.88.29
+cd /opt/brewlog
+docker images 'ghcr.io/alliumpro/brewlog' --format '{{.Tag}}	{{.CreatedSince}}'
+echo 'BREWLOG_IMAGE=ghcr.io/alliumpro/brewlog:<tag>' > .env
+docker compose up -d
+curl -fsS localhost:3000/ready
 ```
 
-Once images are published to GHCR (the `Release` workflow does this on a `v*` tag), a rollback
-becomes pinning the previous tag in `docker-compose.yml` and running `docker compose up -d`.
+The deploy workflow does this by itself when a new image never becomes ready, so a rollback by
+hand is only needed for a fault that appears later.
+
+Reverting the commit on `main` is usually the better move: it redeploys the earlier code
+through the same pipeline and leaves `main` describing what is actually running.
 
 **Migrations run at startup and are forward-only.** Rolling the code back to before a migration
 does not undo it. If a migration is destructive, take a backup before deploying it — this is the
@@ -113,9 +130,50 @@ one case where rollback alone will not save you.
 | `docker compose build --no-cache` | Slow, harmless                                                            |
 | Deleting `/data/uploads`          | Photos gone; the brews keep their rows and show no image                  |
 
-## When a server exists (phases 7–8)
+## The live deployment
 
-The pieces that are written but unproven: TLS termination and the HTTP redirect, HSTS in
-practice, the SSH deploy job in `.github/workflows/release.yml`, a scheduled backup off the host,
-and any metrics or alerting at all. Until those are done, nobody is watching this service — if it
-falls over, the way you find out is by opening it.
+|             |                                                                   |
+| ----------- | ----------------------------------------------------------------- |
+| Site        | https://brewlog.duckdns.org                                       |
+| Host        | 95.182.88.29 — Ubuntu 24.04, 1 vCPU, 961 MB, 10 GB                |
+| Application | `/opt/brewlog`, owned by `deploy`                                 |
+| Container   | one, published on `127.0.0.1:3000` only; nginx faces the internet |
+| Data        | Docker volume `brewlog_brewlog-data` — database and photos        |
+| Certificate | Let's Encrypt via certbot, renewed by a systemd timer             |
+
+Access is by key only, passwords are refused, and `ufw` admits 22, 80 and 443. Two keys reach
+`deploy`: the owner's and a separate one used solely by GitHub Actions. `root` accepts the
+owner's key alone.
+
+Every push to `main` deploys itself: the gate runs, the image is built and scanned in CI,
+pushed to GHCR tagged by commit sha, pulled on the host, and the job waits for `/ready` before
+declaring success. Nothing is built on the server — one core and a gigabyte would not survive
+`npm ci` plus two builds.
+
+### When the site is down
+
+```bash
+ssh deploy@95.182.88.29
+docker compose -f /opt/brewlog/docker-compose.yml ps
+docker compose -f /opt/brewlog/docker-compose.yml logs --tail 100 app
+curl -fsS localhost:3000/ready     # the app itself, bypassing nginx
+systemctl status nginx             # proxy and certificate
+free -m                            # 512 MB is the container's ceiling
+```
+
+If `/ready` answers on the loopback but the site does not, the fault is nginx or the
+certificate, not the application.
+
+### Locked out by the rate limiter
+
+Five login attempts per quarter hour per address. The counter lives in memory:
+
+```bash
+docker compose -f /opt/brewlog/docker-compose.yml restart app
+```
+
+### Still missing
+
+No metrics, no log aggregation, no alerting — phase 8. **Nobody is watching this service.** If
+it falls over, the way you find out is by opening it. Backups stay on the same host, so a
+failure of the host loses them with it.
