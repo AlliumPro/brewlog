@@ -45,10 +45,6 @@ export function ChangePasswordForm() {
           });
       }}
     >
-      <p className={styles.explainer}>
-        Changing it signs out every other device. This one stays signed in.
-      </p>
-
       <TextField
         label="Current password"
         type="password"
