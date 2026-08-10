@@ -47,6 +47,11 @@ jobs:
 
       - run: npm audit --omit=dev --audit-level=high
 
+      # github.repository keeps the owner's capitalisation, and a registry name must be
+      # lowercase — buildx rejects the tag outright.
+      - name: Work out the image name
+        run: echo "IMAGE_BASE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
@@ -66,22 +71,22 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ env.IMAGE_BASE }}:${{ github.sha }}
+            ${{ env.IMAGE_BASE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Scan the image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          image-ref: ${{ env.IMAGE_BASE }}:${{ github.sha }}
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
 
       - name: Deploy over SSH
         env:
-          IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          IMAGE: ${{ env.IMAGE_BASE }}:${{ github.sha }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Through the environment, never interpolated into the script text: a private key is
           # multi-line, and `${{ }}` would paste those newlines straight into the shell.
