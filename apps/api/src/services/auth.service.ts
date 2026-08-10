@@ -1,63 +1,93 @@
-import { verify } from '@node-rs/argon2';
+import { hash, verify } from '@node-rs/argon2';
 import { v7 as uuidv7 } from 'uuid';
 
-import type { SessionRepository } from '../repositories/session.repository.js';
+import type { UserRow } from '../db/schema.js';
+import type { ChangePasswordInput, PublicUser, RegisterInput } from '../domain/user.js';
+import { conflict, unauthorized, unprocessable } from '../lib/errors.js';
+import type { UserRepository } from '../repositories/user.repository.js';
 
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/**
+ * Deliberately slow and memory-hard: 19 MiB and two passes is the OWASP baseline for argon2id.
+ * Raising it further mainly punishes the one-core server this runs on.
+ */
+const HASH_OPTIONS = { memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
 
-export function createAuthService(repository: SessionRepository, passwordHash: string) {
+/**
+ * A hash of nothing in particular, verified against when the email is unknown. Without it,
+ * "no such account" returns in a millisecond while "wrong password" takes eighty, and that
+ * difference tells an attacker which addresses are registered.
+ */
+const DUMMY_HASH =
+  '$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHR0aGF0aXNmaW5l$JXo0aWpXcVJIbmw5bFo4M0dLZDdCUQ';
+
+export function toPublicUser(row: UserRow): PublicUser {
+  return { id: row.id, email: row.email, displayName: row.displayName };
+}
+
+export function createAuthService(users: UserRepository) {
   return {
+    async register(input: RegisterInput): Promise<UserRow> {
+      const existing = await users.findByEmail(input.email);
+
+      if (existing !== undefined) {
+        // Registration cannot hide that an address is taken — the account could not be
+        // created otherwise. Login is where the distinction is kept quiet.
+        throw conflict('An account with that email already exists');
+      }
+
+      const now = new Date().toISOString();
+
+      return users.insert({
+        id: uuidv7(),
+        email: input.email,
+        passwordHash: await hash(input.password, HASH_OPTIONS),
+        displayName: input.displayName,
+        tokenVersion: 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+    },
+
     /**
-     * argon2 verification is deliberately slow and takes the same path whether the password
-     * is wrong or right, so timing does not distinguish the two. The hash is always present —
-     * env validation refuses to boot without it — so there is no "not configured" shortcut
-     * that would leak that fact.
+     * Returns the account or throws the same error for an unknown address and a wrong
+     * password. Telling them apart would turn the login form into a way to enumerate who has
+     * an account here.
      */
-    async verifyPassword(password: string): Promise<boolean> {
-      try {
-        return await verify(passwordHash, password);
-      } catch {
-        // A malformed hash in the environment must not read as a successful login.
-        return false;
+    async authenticate(email: string, password: string): Promise<UserRow> {
+      const user = await users.findByEmail(email);
+
+      if (user === undefined) {
+        await verify(DUMMY_HASH, password).catch(() => false);
+        throw unauthorized('Wrong email or password');
       }
+
+      const ok = await verify(user.passwordHash, password).catch(() => false);
+
+      if (!ok) {
+        throw unauthorized('Wrong email or password');
+      }
+
+      return user;
     },
 
-    async createSession(): Promise<{ id: string; expiresAt: Date }> {
-      const id = uuidv7();
-      const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    async changePassword(user: UserRow, input: ChangePasswordInput): Promise<void> {
+      const ok = await verify(user.passwordHash, input.currentPassword).catch(() => false);
 
-      await repository.pruneExpired(new Date().toISOString());
-      await repository.create(id, expiresAt.toISOString());
+      if (!ok) {
+        throw unauthorized('The current password is not right');
+      }
 
-      return { id, expiresAt };
+      if (input.newPassword === input.currentPassword) {
+        throw unprocessable('The new password is the same as the old one');
+      }
+
+      // Bumps tokenVersion, so every token issued before this moment stops working — the
+      // point of changing a password on a device you no longer trust.
+      await users.setPassword(user.id, await hash(input.newPassword, HASH_OPTIONS));
     },
 
-    /** Returns true when the session is live, refreshing it once it is past halfway. */
-    async validateSession(id: string): Promise<boolean> {
-      const session = await repository.find(id);
-
-      if (session === undefined) {
-        return false;
-      }
-
-      const expiresAt = Date.parse(session.expiresAt);
-      const now = Date.now();
-
-      if (Number.isNaN(expiresAt) || expiresAt <= now) {
-        await repository.remove(id);
-        return false;
-      }
-
-      // Sliding expiry without a database write on every single request.
-      if (expiresAt - now < SESSION_TTL_MS / 2) {
-        await repository.touch(id, new Date(now + SESSION_TTL_MS).toISOString());
-      }
-
-      return true;
-    },
-
-    async destroySession(id: string): Promise<void> {
-      await repository.remove(id);
+    async hashPassword(password: string): Promise<string> {
+      return hash(password, HASH_OPTIONS);
     },
   };
 }

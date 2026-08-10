@@ -11,6 +11,9 @@ import { NotFoundPage, RouteError } from './layouts/RouteError';
 const LoginPage = lazy(() =>
   import('@/pages/login').then((module) => ({ default: module.LoginPage })),
 );
+const RegisterPage = lazy(() =>
+  import('@/pages/register').then((module) => ({ default: module.RegisterPage })),
+);
 const HistoryPage = lazy(() =>
   import('@/pages/history').then((module) => ({ default: module.HistoryPage })),
 );
@@ -34,6 +37,11 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <RouteError />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
     errorElement: <RouteError />,
   },
   {

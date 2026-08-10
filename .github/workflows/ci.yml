@@ -92,6 +92,9 @@ jobs:
       - name: Run the image and smoke test it
         env:
           SMOKE_PASSWORD: smoke-test-only-passphrase
+          # A throwaway container, so registering into it costs nothing and covers the
+          # path unit tests cannot: real environment, real migration, real cookies.
+          SMOKE_ALLOW_REGISTER: '1'
         run: |
           HASH=$(docker run --rm -e P="$SMOKE_PASSWORD" brewlog:ci \
             node -e "import('@node-rs/argon2').then(a=>a.hash(process.env.P,{memoryCost:19456,timeCost:2,parallelism:1})).then(h=>console.log(h))")

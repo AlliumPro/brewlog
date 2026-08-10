@@ -1,61 +1,69 @@
 import { z } from 'zod';
 
 import type { App } from '../app.js';
-import type { Env } from '../config/env.js';
-import { loginSchema, sessionSchema } from '../domain/auth.js';
 import { errorSchema } from '../domain/common.js';
-import { unauthorized } from '../lib/errors.js';
-import { SESSION_COOKIE } from '../plugins/auth.js';
+import {
+  changePasswordSchema,
+  loginSchema,
+  registerSchema,
+  sessionSchema,
+  userSchema,
+} from '../domain/user.js';
 import type { AuthService } from '../services/auth.service.js';
+import { toPublicUser } from '../services/auth.service.js';
 
 interface AuthRouteDeps {
   authService: AuthService;
-  env: Env;
+  /** Attempts per quarter hour on the endpoints where guessing pays. */
+  rateLimitMax: number;
 }
 
-export function registerAuthRoutes(app: App, { authService, env }: AuthRouteDeps): void {
-  const cookieOptions = {
-    signed: true,
-    httpOnly: true,
-    // See the note in plugins/auth.ts: nothing here needs cross-site cookie delivery.
-    sameSite: 'strict',
-    secure: env.NODE_ENV !== 'development',
-    path: '/',
-  } as const;
+/**
+ * Both registration and login are rate limited on top of the global limit: they are the two
+ * endpoints where guessing pays, and each attempt costs the server 19 MiB of argon2 work,
+ * which is a denial-of-service lever as much as a password one.
+ */
+export function registerAuthRoutes(app: App, { authService, rateLimitMax }: AuthRouteDeps): void {
+  const CREDENTIAL_LIMIT = { max: rateLimitMax, timeWindow: '15 minutes' };
+  app.post(
+    '/auth/register',
+    {
+      config: { public: true, rateLimit: CREDENTIAL_LIMIT },
+      schema: {
+        tags: ['auth'],
+        summary: 'Create an account',
+        body: registerSchema,
+        response: { 201: sessionSchema, 409: errorSchema, 422: errorSchema, 429: errorSchema },
+      },
+    },
+    async (request, reply) => {
+      const user = await authService.register(request.body);
+
+      // Signed in immediately: asking someone to type the password again right after
+      // choosing it achieves nothing.
+      app.issueSession(reply, user);
+
+      return reply.status(201).send({ authenticated: true, user: toPublicUser(user) });
+    },
+  );
 
   app.post(
     '/auth/login',
     {
-      config: {
-        public: true,
-        // Five attempts per quarter hour turns brute force into a multi-year exercise
-        // without locking the owner out for a typo.
-        rateLimit: { max: 5, timeWindow: '15 minutes' },
-      },
+      config: { public: true, rateLimit: CREDENTIAL_LIMIT },
       schema: {
         tags: ['auth'],
-        summary: 'Exchange the site password for a session cookie',
+        summary: 'Sign in',
         body: loginSchema,
-        response: {
-          200: sessionSchema,
-          401: errorSchema.describe('Wrong password'),
-          422: errorSchema,
-          429: errorSchema.describe('Too many attempts'),
-        },
+        response: { 200: sessionSchema, 401: errorSchema, 422: errorSchema, 429: errorSchema },
       },
     },
     async (request, reply) => {
-      if (!(await authService.verifyPassword(request.body.password))) {
-        // Deliberately identical to any other failure: nothing here reveals whether a
-        // password is configured or how close the attempt was.
-        throw unauthorized();
-      }
+      const user = await authService.authenticate(request.body.email, request.body.password);
 
-      const session = await authService.createSession();
+      app.issueSession(reply, user);
 
-      return reply
-        .setCookie(SESSION_COOKIE, session.id, { ...cookieOptions, expires: session.expiresAt })
-        .send({ authenticated: true } as const);
+      return reply.status(200).send({ authenticated: true, user: toPublicUser(user) });
     },
   );
 
@@ -65,25 +73,15 @@ export function registerAuthRoutes(app: App, { authService, env }: AuthRouteDeps
       config: { public: true },
       schema: {
         tags: ['auth'],
-        summary: 'Revoke the current session',
-        response: { 200: z.object({ authenticated: z.literal(false) }) },
+        summary: 'Sign out on this device',
+        response: { 204: z.null() },
       },
     },
-    async (request, reply) => {
-      const raw = request.cookies[SESSION_COOKIE];
-
-      if (raw !== undefined) {
-        const unsigned = request.unsignCookie(raw);
-
-        if (unsigned.valid) {
-          // Server-side revocation, not just a cleared cookie.
-          await authService.destroySession(unsigned.value);
-        }
-      }
-
-      return reply
-        .clearCookie(SESSION_COOKIE, cookieOptions)
-        .send({ authenticated: false } as const);
+    async (_request, reply) => {
+      // Clears the cookie here only. Signing out everywhere is what changing the password
+      // does, because that is the action people take when a device is lost.
+      app.clearSession(reply);
+      return reply.status(204).send(null);
     },
   );
 
@@ -92,10 +90,41 @@ export function registerAuthRoutes(app: App, { authService, env }: AuthRouteDeps
     {
       schema: {
         tags: ['auth'],
-        summary: 'Check whether the current session is still valid',
+        summary: 'Who is signed in',
         response: { 200: sessionSchema, 401: errorSchema },
       },
     },
-    () => ({ authenticated: true }) as const,
+    (request) => ({ authenticated: true as const, user: toPublicUser(request.currentUser) }),
+  );
+
+  app.post(
+    '/auth/password',
+    {
+      config: { rateLimit: CREDENTIAL_LIMIT },
+      schema: {
+        tags: ['auth'],
+        summary: 'Change the password',
+        body: changePasswordSchema,
+        response: {
+          200: userSchema,
+          401: errorSchema,
+          422: errorSchema,
+          429: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      await authService.changePassword(request.currentUser, request.body);
+
+      // The old token no longer verifies — its version is behind — so this device needs a
+      // new one or the person would be signed out by their own password change.
+      const updated = {
+        ...request.currentUser,
+        tokenVersion: request.currentUser.tokenVersion + 1,
+      };
+      app.issueSession(reply, updated);
+
+      return reply.status(200).send(toPublicUser(updated));
+    },
   );
 }

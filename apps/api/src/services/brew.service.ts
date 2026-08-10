@@ -92,13 +92,13 @@ export function toBrew(row: BrewRow): Brew {
 
 export function createBrewService(repository: BrewRepository, photos: PhotoService) {
   return {
-    async list(query: BrewListQuery): Promise<{ items: Brew[]; total: number }> {
-      const { rows, total } = await repository.list(query);
+    async list(userId: string, query: BrewListQuery): Promise<{ items: Brew[]; total: number }> {
+      const { rows, total } = await repository.list(userId, query);
       return { items: rows.map(toBrew), total };
     },
 
-    async get(id: string): Promise<Brew> {
-      const row = await repository.findById(id);
+    async get(userId: string, id: string): Promise<Brew> {
+      const row = await repository.findById(userId, id);
 
       if (row === undefined) {
         throw notFound('Brew');
@@ -107,11 +107,12 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       return toBrew(row);
     },
 
-    async create(input: BrewCreate): Promise<Brew> {
+    async create(userId: string, input: BrewCreate): Promise<Brew> {
       const now = new Date().toISOString();
 
       const row = await repository.insert({
         id: uuidv7(),
+        userId,
         ...input,
         photoPath: null,
         createdAt: now,
@@ -121,8 +122,8 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       return toBrew(row);
     },
 
-    async update(id: string, patch: BrewUpdate): Promise<Brew> {
-      const existing = await repository.findById(id);
+    async update(userId: string, id: string, patch: BrewUpdate): Promise<Brew> {
+      const existing = await repository.findById(userId, id);
 
       if (existing === undefined) {
         throw notFound('Brew');
@@ -154,7 +155,7 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
         throw unprocessable(first?.message ?? 'Resulting brew is not valid');
       }
 
-      const row = await repository.update(id, {
+      const row = await repository.update(userId, id, {
         ...validated.data,
         updatedAt: new Date().toISOString(),
       });
@@ -166,8 +167,8 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       return toBrew(row);
     },
 
-    async remove(id: string): Promise<void> {
-      const removed = await repository.remove(id);
+    async remove(userId: string, id: string): Promise<void> {
+      const removed = await repository.remove(userId, id);
 
       if (!removed) {
         throw notFound('Brew');
@@ -177,15 +178,15 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       await photos.remove(id);
     },
 
-    async attachPhoto(id: string, file: Buffer): Promise<Brew> {
-      const existing = await repository.findById(id);
+    async attachPhoto(userId: string, id: string, file: Buffer): Promise<Brew> {
+      const existing = await repository.findById(userId, id);
 
       if (existing === undefined) {
         throw notFound('Brew');
       }
 
       const photoPath = await photos.store(id, file);
-      const row = await repository.update(id, {
+      const row = await repository.update(userId, id, {
         photoPath,
         updatedAt: new Date().toISOString(),
       });
@@ -198,8 +199,8 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
     },
 
     /** Resolves the on-disk path only for a brew that actually has a photo. */
-    async photoPath(id: string): Promise<string> {
-      const row = await repository.findById(id);
+    async photoPath(userId: string, id: string): Promise<string> {
+      const row = await repository.findById(userId, id);
 
       if (row === undefined) {
         throw notFound('Brew');
@@ -212,8 +213,8 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       return row.photoPath;
     },
 
-    async detachPhoto(id: string): Promise<void> {
-      const row = await repository.findById(id);
+    async detachPhoto(userId: string, id: string): Promise<void> {
+      const row = await repository.findById(userId, id);
 
       if (row === undefined) {
         throw notFound('Brew');
@@ -224,15 +225,15 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       }
 
       await photos.remove(id);
-      await repository.update(id, { photoPath: null, updatedAt: new Date().toISOString() });
+      await repository.update(userId, id, { photoPath: null, updatedAt: new Date().toISOString() });
     },
 
-    async suggestBeans(q: string | undefined, limit: number): Promise<string[]> {
-      return repository.suggest('beanName', q, limit);
+    async suggestBeans(userId: string, q: string | undefined, limit: number): Promise<string[]> {
+      return repository.suggest(userId, 'beanName', q, limit);
     },
 
-    async suggestRoasters(q: string | undefined, limit: number): Promise<string[]> {
-      return repository.suggest('roaster', q, limit);
+    async suggestRoasters(userId: string, q: string | undefined, limit: number): Promise<string[]> {
+      return repository.suggest(userId, 'roaster', q, limit);
     },
   };
 }

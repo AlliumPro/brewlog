@@ -104,9 +104,9 @@
         }
       }
     },
-    "/api/auth/login": {
+    "/api/auth/register": {
       "post": {
-        "summary": "Exchange the site password for a session cookie",
+        "summary": "Create an account",
         "tags": [
           "auth"
         ],
@@ -117,24 +117,35 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254
+                  },
                   "password": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
+                    "minLength": 8,
+                    "maxLength": 200
+                  },
+                  "displayName": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
                   }
                 },
                 "required": [
+                  "email",
                   "password"
                 ],
-                "description": "Password gate"
+                "description": "New account"
               }
             }
           },
-          "description": "Password gate"
+          "description": "New account"
         },
         "responses": {
-          "200": {
-            "description": "Active session",
+          "201": {
+            "description": "Current session",
             "content": {
               "application/json": {
                 "schema": {
@@ -145,19 +156,42 @@
                       "enum": [
                         true
                       ]
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "displayName"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Account"
                     }
                   },
                   "required": [
-                    "authenticated"
+                    "authenticated",
+                    "user"
                   ],
                   "additionalProperties": false,
-                  "description": "Active session"
+                  "description": "Current session"
                 }
               }
             }
           },
-          "401": {
-            "description": "Wrong password",
+          "409": {
+            "description": "Error envelope",
             "content": {
               "application/json": {
                 "schema": {
@@ -186,7 +220,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Wrong password"
+                  "description": "Error envelope"
                 }
               }
             }
@@ -227,7 +261,7 @@
             }
           },
           "429": {
-            "description": "Too many attempts",
+            "description": "Error envelope",
             "content": {
               "application/json": {
                 "schema": {
@@ -256,7 +290,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Too many attempts"
+                  "description": "Error envelope"
                 }
               }
             }
@@ -264,47 +298,42 @@
         }
       }
     },
-    "/api/auth/logout": {
+    "/api/auth/login": {
       "post": {
-        "summary": "Revoke the current session",
+        "summary": "Sign in",
         "tags": [
           "auth"
         ],
-        "responses": {
-          "200": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "authenticated": {
-                      "type": "boolean",
-                      "enum": [
-                        false
-                      ]
-                    }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254
                   },
-                  "required": [
-                    "authenticated"
-                  ],
-                  "additionalProperties": false
-                }
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "description": "Credentials"
               }
             }
-          }
-        }
-      }
-    },
-    "/api/auth/session": {
-      "get": {
-        "summary": "Check whether the current session is still valid",
-        "tags": [
-          "auth"
-        ],
+          },
+          "description": "Credentials"
+        },
         "responses": {
           "200": {
-            "description": "Active session",
+            "description": "Current session",
             "content": {
               "application/json": {
                 "schema": {
@@ -315,18 +344,398 @@
                       "enum": [
                         true
                       ]
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "displayName"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Account"
                     }
                   },
                   "required": [
-                    "authenticated"
+                    "authenticated",
+                    "user"
                   ],
                   "additionalProperties": false,
-                  "description": "Active session"
+                  "description": "Current session"
                 }
               }
             }
           },
           "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Sign out on this device",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "summary": "Who is signed in",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Current session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "displayName"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Account"
+                    }
+                  },
+                  "required": [
+                    "authenticated",
+                    "user"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Current session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password": {
+      "post": {
+        "summary": "Change the password",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "description": "Password change"
+              }
+            }
+          },
+          "description": "Password change"
+        },
+        "responses": {
+          "200": {
+            "description": "Account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "displayName"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Stable machine-readable code"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable summary, safe to display"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error envelope"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "Error envelope",
             "content": {
               "application/json": {
@@ -2175,7 +2584,7 @@
     },
     "/api/profile": {
       "get": {
-        "summary": "Read the owner profile",
+        "summary": "Read the signed-in account profile",
         "tags": [
           "profile"
         ],
@@ -2240,7 +2649,7 @@
         }
       },
       "patch": {
-        "summary": "Update the owner profile",
+        "summary": "Update the signed-in account profile",
         "tags": [
           "profile"
         ],

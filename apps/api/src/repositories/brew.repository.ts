@@ -13,8 +13,12 @@ import type { BrewListQuery } from '../domain/brew.js';
  * FTS5 table or a normalised search column.
  */
 export function createBrewRepository(db: Db) {
-  const buildFilters = (query: BrewListQuery) => {
-    const conditions = [];
+  /**
+   * The owner is the first condition and is not optional. Filtering in the handlers instead
+   * would mean one forgotten line exposes somebody else's journal.
+   */
+  const buildFilters = (userId: string, query: BrewListQuery) => {
+    const conditions = [eq(brews.userId, userId)];
 
     if (query.method !== undefined) {
       const methods = Array.isArray(query.method) ? query.method : [query.method];
@@ -27,15 +31,23 @@ export function createBrewRepository(db: Db) {
 
     if (query.q !== undefined) {
       const pattern = `%${query.q}%`;
-      conditions.push(or(like(brews.beanName, pattern), like(brews.roaster, pattern)));
+      // or() is typed as possibly undefined because it accepts an empty list; with two
+      // arguments it never is.
+      const search = or(like(brews.beanName, pattern), like(brews.roaster, pattern));
+
+      if (search !== undefined) {
+        conditions.push(search);
+      }
     }
 
-    return conditions.length > 0 ? and(...conditions) : undefined;
+    // `and()` is typed as possibly undefined because it accepts an empty list. This one never
+    // is — the owner condition is always present — and starting from it keeps the type honest.
+    return conditions.reduce((left, right) => and(left, right) ?? left);
   };
 
   return {
-    async list(query: BrewListQuery): Promise<{ rows: BrewRow[]; total: number }> {
-      const where = buildFilters(query);
+    async list(userId: string, query: BrewListQuery): Promise<{ rows: BrewRow[]; total: number }> {
+      const where = buildFilters(userId, query);
       // Secondary key keeps paging stable when several brews share a timestamp or rating.
       const order =
         query.sort === 'rating'
@@ -55,8 +67,12 @@ export function createBrewRepository(db: Db) {
       return { rows, total: totals?.value ?? 0 };
     },
 
-    async findById(id: string): Promise<BrewRow | undefined> {
-      const [row] = await db.select().from(brews).where(eq(brews.id, id)).limit(1);
+    async findById(userId: string, id: string): Promise<BrewRow | undefined> {
+      const [row] = await db
+        .select()
+        .from(brews)
+        .where(and(eq(brews.id, id), eq(brews.userId, userId)))
+        .limit(1);
       return row;
     },
 
@@ -70,20 +86,38 @@ export function createBrewRepository(db: Db) {
       return inserted;
     },
 
-    async update(id: string, patch: Partial<BrewInsert>): Promise<BrewRow | undefined> {
-      const [updated] = await db.update(brews).set(patch).where(eq(brews.id, id)).returning();
+    async update(
+      userId: string,
+      id: string,
+      patch: Partial<BrewInsert>,
+    ): Promise<BrewRow | undefined> {
+      const [updated] = await db
+        .update(brews)
+        .set(patch)
+        .where(and(eq(brews.id, id), eq(brews.userId, userId)))
+        .returning();
       return updated;
     },
 
-    async remove(id: string): Promise<boolean> {
-      const removed = await db.delete(brews).where(eq(brews.id, id)).returning({ id: brews.id });
+    async remove(userId: string, id: string): Promise<boolean> {
+      const removed = await db
+        .delete(brews)
+        .where(and(eq(brews.id, id), eq(brews.userId, userId)))
+        .returning({ id: brews.id });
       return removed.length > 0;
     },
 
     /** Distinct previously used values, for the autocomplete on the new-brew form. */
-    async suggest(field: 'beanName' | 'roaster', q: string | undefined, limit: number) {
+    async suggest(
+      userId: string,
+      field: 'beanName' | 'roaster',
+      q: string | undefined,
+      limit: number,
+    ) {
       const column = field === 'beanName' ? brews.beanName : brews.roaster;
-      const conditions = [sql`${column} is not null`];
+      // Scoped to the owner: which beans someone buys is their business, and an unscoped
+      // autocomplete would quietly read them out of other people's journals.
+      const conditions = [eq(brews.userId, userId), sql`${column} is not null`];
 
       if (q !== undefined) {
         conditions.push(like(column, `%${q}%`));

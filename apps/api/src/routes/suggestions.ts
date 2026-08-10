@@ -19,7 +19,8 @@ export function registerSuggestionRoutes(app: App, { brewService }: SuggestionRo
         response: { 200: suggestionsSchema, 401: errorSchema, 422: errorSchema },
       },
     },
-    (request) => brewService.suggestBeans(request.query.q, request.query.limit),
+    (request) =>
+      brewService.suggestBeans(request.currentUser.id, request.query.q, request.query.limit),
   );
 
   app.get(
@@ -32,6 +33,7 @@ export function registerSuggestionRoutes(app: App, { brewService }: SuggestionRo
         response: { 200: suggestionsSchema, 401: errorSchema, 422: errorSchema },
       },
     },
-    (request) => brewService.suggestRoasters(request.query.q, request.query.limit),
+    (request) =>
+      brewService.suggestRoasters(request.currentUser.id, request.query.q, request.query.limit),
   );
 }

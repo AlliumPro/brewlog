@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useGetProfileQuery, useUpdateProfileMutation } from '@/entities/profile';
-import { useLogoutMutation } from '@/features/auth';
+import { useGetSessionQuery, useLogoutMutation } from '@/features/auth';
+import { ChangePasswordForm } from './ChangePasswordForm';
 import { Button, ErrorState, Skeleton, TextField, ThemeSwitcher } from '@/shared/ui';
 
 import styles from './ProfilePage.module.css';
@@ -12,6 +13,7 @@ export function ProfilePage() {
   const { data, isLoading, isError, refetch } = useGetProfileQuery();
   const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+  const { data: session } = useGetSessionQuery();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [saved, setSaved] = useState(false);
@@ -43,6 +45,9 @@ export function ProfilePage() {
           </Tabs.Trigger>
           <Tabs.Trigger value="appearance" className={styles.tab}>
             Appearance
+          </Tabs.Trigger>
+          <Tabs.Trigger value="security" className={styles.tab}>
+            Security
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -83,6 +88,17 @@ export function ProfilePage() {
               </span>
             </div>
           </form>
+        </Tabs.Content>
+
+        <Tabs.Content value="security" className={styles.panel}>
+          <div className={styles.setting}>
+            <div>
+              <p className={styles.settingName}>Email</p>
+              <p className={styles.settingHint}>{session?.user.email ?? '—'}</p>
+            </div>
+          </div>
+
+          <ChangePasswordForm />
         </Tabs.Content>
 
         <Tabs.Content value="appearance" className={styles.panel}>

@@ -16,11 +16,19 @@ and which beans score best for me". It is a private tool, not a social product.
 
 ## 2. Users and stories
 
-One user: the owner. No roles, no registration, no multi-tenancy. Access is protected by a single
-site-wide password gate.
+Anyone may register with an email and a password; each account keeps its own journal and can
+see nothing of anyone else's. There are no roles: every account has the same abilities over its
+own data.
 
-- As the owner, I unlock the site with a password so that the journal is not readable by anyone who
-  finds the URL.
+**This supersedes the original single-user design.** The change and its consequences —
+including that registration is open, so the site is now public with private journals inside it
+rather than a private site — are recorded in [docs/adr/0002-multi-user-jwt.md](docs/adr/0002-multi-user-jwt.md).
+Sharing recipes between accounts is a later goal; nothing here implements it.
+
+- As a visitor, I create an account with an email and a password and start a journal of my own.
+- As a signed-in person, I stay signed in across days of use, and am asked again after a
+  fortnight away.
+- As a signed-in person, I change my password, which ends the session on every other device.
 - As the owner, I log a brew right after tasting it, on a phone, without typing more than necessary.
 - As the owner, I reuse a bean name I already entered instead of retyping it.
 - As the owner, I browse my history newest-first and filter it by method or bean.

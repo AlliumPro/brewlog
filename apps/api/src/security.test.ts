@@ -11,6 +11,8 @@ import type { TestContext } from './test/helpers.js';
  * cannot ship unprotected just because nobody remembered to add it to a test.
  */
 const PUBLIC_ROUTES = new Set([
+  // Registration and sign-in cannot demand a session; both are rate limited instead.
+  'POST /api/auth/register',
   'POST /api/auth/login',
   'POST /api/auth/logout',
   'GET /health',

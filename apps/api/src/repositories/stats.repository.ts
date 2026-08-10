@@ -1,4 +1,4 @@
-import { count, desc, sql } from 'drizzle-orm';
+import { count, desc, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client.js';
 import { brews } from '../db/schema.js';
@@ -9,7 +9,7 @@ import { brews } from '../db/schema.js';
  */
 export function createStatsRepository(db: Db) {
   return {
-    async ratingOverTime() {
+    async ratingOverTime(userId: string) {
       const month = sql<string>`strftime('%Y-%m', ${brews.brewedAt})`;
 
       return db
@@ -19,11 +19,12 @@ export function createStatsRepository(db: Db) {
           count: count(),
         })
         .from(brews)
+        .where(eq(brews.userId, userId))
         .groupBy(month)
         .orderBy(month);
     },
 
-    async ratingByRatio(limit: number) {
+    async ratingByRatio(userId: string, limit: number) {
       return db
         .select({
           ratio: sql<number>`round(${brews.waterMl} / ${brews.doseGrams}, 2)`,
@@ -31,33 +32,36 @@ export function createStatsRepository(db: Db) {
           method: brews.method,
         })
         .from(brews)
+        .where(eq(brews.userId, userId))
         .orderBy(desc(brews.brewedAt))
         .limit(limit);
     },
 
-    async methodDistribution() {
+    async methodDistribution(userId: string) {
       return db
         .select({ method: brews.method, count: count() })
         .from(brews)
+        .where(eq(brews.userId, userId))
         .groupBy(brews.method)
         .orderBy(desc(count()));
     },
 
     /** Beans with a single brew are excluded: one lucky cup would top the chart forever. */
-    async topBeans(minBrews: number, limit: number) {
+    async topBeans(userId: string, minBrews: number, limit: number) {
       const avgRating = sql<number>`round(avg(${brews.rating}), 2)`;
 
       return db
         .select({ beanName: brews.beanName, avgRating, count: count() })
         .from(brews)
+        .where(eq(brews.userId, userId))
         .groupBy(brews.beanName)
         .having(sql`count(*) >= ${minBrews}`)
         .orderBy(desc(avgRating))
         .limit(limit);
     },
 
-    async total(): Promise<number> {
-      const [row] = await db.select({ value: count() }).from(brews);
+    async total(userId: string): Promise<number> {
+      const [row] = await db.select({ value: count() }).from(brews).where(eq(brews.userId, userId));
       return row?.value ?? 0;
     },
   };

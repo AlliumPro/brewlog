@@ -13,6 +13,10 @@
 
 const baseUrl = process.env.SMOKE_URL ?? 'http://localhost:3000';
 const password = process.env.SMOKE_PASSWORD;
+const email = process.env.SMOKE_EMAIL ?? 'owner@brewlog.local';
+// Registering leaves an account behind, which is fine on a throwaway container and not on a
+// live site. Off unless asked for.
+const canRegister = process.env.SMOKE_ALLOW_REGISTER === '1';
 const docsUser = process.env.SWAGGER_USER;
 const docsPassword = process.env.SWAGGER_PASSWORD;
 
@@ -118,14 +122,42 @@ async function main() {
     const wrong = await status('/api/auth/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ password: 'not the password' }),
+      body: JSON.stringify({ email, password: 'not the password' }),
     });
     report('wrong password rejected', wrong.status === 401);
+
+    if (canRegister) {
+      const fresh = `smoke-${String(Date.now())}@example.com`;
+      const registered = await status('/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: fresh, password: 'a smoke test password' }),
+      });
+      const body = registered.status === 201 ? await registered.json() : undefined;
+
+      report(
+        'registration creates an account and signs it in',
+        registered.status === 201 && body?.user?.email === fresh,
+        `status ${String(registered.status)}`,
+      );
+
+      // A brand new account starts with an empty journal — proof the owner filter is applied
+      // rather than everyone sharing one list.
+      const cookieFresh = (registered.headers.getSetCookie?.() ?? []).join('; ');
+      const theirs = await status('/api/brews', { headers: { cookie: cookieFresh } });
+      const list = theirs.status === 200 ? await theirs.json() : undefined;
+
+      report(
+        'a new account sees an empty journal',
+        list?.total === 0,
+        `total ${String(list?.total)}`,
+      );
+    }
 
     const login = await status('/api/auth/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email, password }),
     });
     // A hash mangled by env interpolation fails exactly here, while /ready stays green.
     report('login with the real password', login.status === 200, `status ${String(login.status)}`);

@@ -8,14 +8,14 @@ const SCATTER_LIMIT = 1000;
 
 export function createStatsService(repository: StatsRepository) {
   return {
-    async summary(): Promise<Stats> {
+    async summary(userId: string): Promise<Stats> {
       const [ratingOverTime, ratingByRatio, methodDistribution, topBeans, totalBrews] =
         await Promise.all([
-          repository.ratingOverTime(),
-          repository.ratingByRatio(SCATTER_LIMIT),
-          repository.methodDistribution(),
-          repository.topBeans(TOP_BEANS_MIN_BREWS, TOP_BEANS_LIMIT),
-          repository.total(),
+          repository.ratingOverTime(userId),
+          repository.ratingByRatio(userId, SCATTER_LIMIT),
+          repository.methodDistribution(userId),
+          repository.topBeans(userId, TOP_BEANS_MIN_BREWS, TOP_BEANS_LIMIT),
+          repository.total(userId),
         ]);
 
       return {
