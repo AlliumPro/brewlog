@@ -2,8 +2,6 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { hash } from '@node-rs/argon2';
-
 import { buildApp } from '../app.js';
 import type { App } from '../app.js';
 import { loadEnv } from '../config/env.js';
@@ -25,7 +23,9 @@ export interface TestContext {
  * A fresh in-memory database and a throwaway upload directory per suite, so tests cannot
  * see each other's data and the rate limiter starts from zero in each file.
  */
-export async function createTestApp(options: { withStatic?: boolean } = {}): Promise<TestContext> {
+export async function createTestApp(
+  options: { withStatic?: boolean; authRateLimitMax?: number } = {},
+): Promise<TestContext> {
   const uploadDir = await mkdtemp(join(tmpdir(), 'brewlog-test-'));
 
   // A stand-in for apps/web/dist, so the static-serving behaviour can be tested without
@@ -43,19 +43,17 @@ export async function createTestApp(options: { withStatic?: boolean } = {}): Pro
       'utf8',
     );
   }
-  const passwordHash = await hash(TEST_PASSWORD, {
-    memoryCost: 19_456,
-    timeCost: 2,
-    parallelism: 1,
-  });
 
   const env = loadEnv({
     ...process.env,
     NODE_ENV: 'test',
     DATABASE_URL: ':memory:',
-    AUTH_PASSWORD_HASH: passwordHash,
     UPLOAD_DIR: uploadDir,
     LOG_LEVEL: 'silent',
+    // Raised out of the way by default: a suite creates more accounts in a minute than the
+    // production limit allows in a quarter of an hour. One test lowers it back to assert the
+    // lockout itself.
+    AUTH_RATE_LIMIT_MAX: String(options.authRateLimitMax ?? 1000),
     ...(staticDir === undefined ? {} : { STATIC_DIR: staticDir }),
   });
 
@@ -80,20 +78,44 @@ export async function createTestApp(options: { withStatic?: boolean } = {}): Pro
 }
 
 /** Logs in and returns a ready-to-use Cookie header value. */
-export async function login(app: App): Promise<string> {
+/**
+ * Registers an account and returns its cookie. Each test that needs a second person calls this
+ * again with a different address — data isolation is only testable with two of them.
+ */
+export async function registerUser(
+  app: App,
+  email = 'owner@example.com',
+  password = TEST_PASSWORD,
+): Promise<{ cookie: string; userId: string }> {
   const response = await app.inject({
     method: 'POST',
-    url: '/api/auth/login',
-    payload: { password: TEST_PASSWORD },
+    url: '/api/auth/register',
+    payload: { email, password },
   });
 
-  const cookie = response.cookies.find((candidate) => candidate.name === 'brewlog_session');
-
-  if (cookie === undefined) {
-    throw new Error(`login did not set a session cookie (status ${String(response.statusCode)})`);
+  if (response.statusCode !== 201) {
+    throw new Error(`register failed with ${String(response.statusCode)}: ${response.body}`);
   }
 
-  return `brewlog_session=${cookie.value}`;
+  return { cookie: sessionCookie(response), userId: response.json().user.id };
+}
+
+/** The Set-Cookie value, ready to be sent straight back as a Cookie header. */
+export function sessionCookie(response: { headers: Record<string, unknown> }): string {
+  const header = response.headers['set-cookie'];
+  const raw = Array.isArray(header) ? header[0] : header;
+
+  if (typeof raw !== 'string') {
+    throw new Error('no session cookie in the response');
+  }
+
+  return raw.split(';')[0] ?? '';
+}
+
+/** Registers the default account and returns its cookie — the common case. */
+export async function login(app: App): Promise<string> {
+  const { cookie } = await registerUser(app);
+  return cookie;
 }
 
 export function sampleBrew(overrides: Record<string, unknown> = {}): Record<string, unknown> {

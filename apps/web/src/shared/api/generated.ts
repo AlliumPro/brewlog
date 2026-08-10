@@ -94,6 +94,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create an account */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description New account */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        email: string;
+                        password: string;
+                        /** @default null */
+                        displayName?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Current session */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            authenticated: true;
+                            /** @description Account */
+                            user: {
+                                id: string;
+                                email: string;
+                                displayName: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -103,7 +206,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Exchange the site password for a session cookie */
+        /** Sign in */
         post: {
             parameters: {
                 query?: never;
@@ -111,16 +214,17 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            /** @description Password gate */
+            /** @description Credentials */
             requestBody: {
                 content: {
                     "application/json": {
+                        email: string;
                         password: string;
                     };
                 };
             };
             responses: {
-                /** @description Active session */
+                /** @description Current session */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -129,10 +233,16 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             authenticated: true;
+                            /** @description Account */
+                            user: {
+                                id: string;
+                                email: string;
+                                displayName: string | null;
+                            };
                         };
                     };
                 };
-                /** @description Wrong password */
+                /** @description Error envelope */
                 401: {
                     headers: {
                         [name: string]: unknown;
@@ -164,7 +274,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Too many attempts */
+                /** @description Error envelope */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -197,7 +307,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Revoke the current session */
+        /** Sign out on this device */
         post: {
             parameters: {
                 query?: never;
@@ -208,15 +318,12 @@ export interface paths {
             requestBody?: never;
             responses: {
                 /** @description Default Response */
-                200: {
+                204: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            authenticated: false;
-                        };
+                        "application/json": null;
                     };
                 };
             };
@@ -234,7 +341,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Check whether the current session is still valid */
+        /** Who is signed in */
         get: {
             parameters: {
                 query?: never;
@@ -244,7 +351,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Active session */
+                /** @description Current session */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -253,6 +360,12 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             authenticated: true;
+                            /** @description Account */
+                            user: {
+                                id: string;
+                                email: string;
+                                displayName: string | null;
+                            };
                         };
                     };
                 };
@@ -276,6 +389,102 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change the password */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** @description Password change */
+            requestBody: {
+                content: {
+                    "application/json": {
+                        currentPassword: string;
+                        newPassword: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Account */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            email: string;
+                            displayName: string | null;
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Error envelope */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @description Stable machine-readable code */
+                                code: string;
+                                /** @description Human-readable summary, safe to display */
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1019,7 +1228,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read the owner profile */
+        /** Read the signed-in account profile */
         get: {
             parameters: {
                 query?: never;
@@ -1064,7 +1273,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update the owner profile */
+        /** Update the signed-in account profile */
         patch: {
             parameters: {
                 query?: never;

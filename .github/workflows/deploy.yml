@@ -141,6 +141,8 @@ jobs:
           exit 1
           REMOTE
 
+      # A fresh container each run, so registering into it costs nothing and proves the path
+      # that unit tests cannot: real environment, real migrations, real cookie handling.
       - name: Check the site answers over HTTPS
         run: |
           # From outside the host: proves nginx, the certificate and the proxy path, none of

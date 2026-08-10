@@ -19,9 +19,8 @@ import { sessions } from './db/schema.js';
 import { authPlugin } from './plugins/auth.js';
 import { swaggerPlugin } from './plugins/swagger.js';
 import { createBrewRepository } from './repositories/brew.repository.js';
-import { createProfileRepository } from './repositories/profile.repository.js';
+import { createUserRepository } from './repositories/user.repository.js';
 import { createRecipeRepository } from './repositories/recipe.repository.js';
-import { createSessionRepository } from './repositories/session.repository.js';
 import { createStatsRepository } from './repositories/stats.repository.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerBrewRoutes } from './routes/brews.js';
@@ -163,16 +162,15 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
 
   // Dependency graph, wired once. Repositories talk SQL, services own the rules.
   const brewRepository = createBrewRepository(db);
-  const profileRepository = createProfileRepository(db);
   const recipeRepository = createRecipeRepository(db);
-  const sessionRepository = createSessionRepository(db);
+  const userRepository = createUserRepository(db);
   const statsRepository = createStatsRepository(db);
 
   const photoService = createPhotoService(env.UPLOAD_DIR);
   const brewService = createBrewService(brewRepository, photoService);
   const recipeService = createRecipeService(recipeRepository);
   const statsService = createStatsService(statsRepository);
-  const authService = createAuthService(sessionRepository, env.AUTH_PASSWORD_HASH);
+  const authService = createAuthService(userRepository);
 
   const scriptHashes = env.STATIC_DIR === undefined ? [] : inlineScriptHashes(env.STATIC_DIR);
 
@@ -235,14 +233,14 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
         limits: { fileSize: MAX_PHOTO_BYTES, files: 1, fields: 0 },
       });
 
-      await api.register(authPlugin, { env, authService });
+      await api.register(authPlugin, { env, userRepository });
 
       const scoped = api.withTypeProvider<ZodTypeProvider>();
 
-      registerAuthRoutes(scoped, { authService, env });
+      registerAuthRoutes(scoped, { authService, rateLimitMax: env.AUTH_RATE_LIMIT_MAX });
       registerBrewRoutes(scoped, { brewService });
       registerPhotoRoutes(scoped, { brewService });
-      registerProfileRoutes(scoped, { profileRepository });
+      registerProfileRoutes(scoped, { userRepository });
       registerRecipeRoutes(scoped, { recipeService });
       registerStatsRoutes(scoped, { statsService });
       registerSuggestionRoutes(scoped, { brewService });

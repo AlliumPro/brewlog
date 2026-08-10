@@ -26,7 +26,7 @@ export function registerBrewRoutes(app: App, { brewService }: BrewRouteDeps): vo
         response: { 200: brewListSchema, 401: errorSchema, 422: errorSchema },
       },
     },
-    (request) => brewService.list(request.query),
+    (request) => brewService.list(request.currentUser.id, request.query),
   );
 
   app.post(
@@ -40,7 +40,7 @@ export function registerBrewRoutes(app: App, { brewService }: BrewRouteDeps): vo
       },
     },
     async (request, reply) => {
-      const brew = await brewService.create(request.body);
+      const brew = await brewService.create(request.currentUser.id, request.body);
       return reply.status(201).send(brew);
     },
   );
@@ -55,7 +55,7 @@ export function registerBrewRoutes(app: App, { brewService }: BrewRouteDeps): vo
         response: { 200: brewSchema, 401: errorSchema, 404: errorSchema },
       },
     },
-    (request) => brewService.get(request.params.id),
+    (request) => brewService.get(request.currentUser.id, request.params.id),
   );
 
   app.patch(
@@ -69,7 +69,7 @@ export function registerBrewRoutes(app: App, { brewService }: BrewRouteDeps): vo
         response: { 200: brewSchema, 401: errorSchema, 404: errorSchema, 422: errorSchema },
       },
     },
-    (request) => brewService.update(request.params.id, request.body),
+    (request) => brewService.update(request.currentUser.id, request.params.id, request.body),
   );
 
   app.delete(
@@ -83,7 +83,7 @@ export function registerBrewRoutes(app: App, { brewService }: BrewRouteDeps): vo
       },
     },
     async (request, reply) => {
-      await brewService.remove(request.params.id);
+      await brewService.remove(request.currentUser.id, request.params.id);
       return reply.status(204).send(null);
     },
   );

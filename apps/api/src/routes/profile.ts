@@ -1,23 +1,27 @@
 import type { App } from '../app.js';
 import { errorSchema } from '../domain/common.js';
 import { profileSchema, profileUpdateSchema } from '../domain/profile.js';
-import type { ProfileRepository } from '../repositories/profile.repository.js';
+import type { UserRepository } from '../repositories/user.repository.js';
 
 interface ProfileRouteDeps {
-  profileRepository: ProfileRepository;
+  userRepository: UserRepository;
 }
 
-export function registerProfileRoutes(app: App, { profileRepository }: ProfileRouteDeps): void {
+/**
+ * The display name now belongs to the account rather than to a single-row table, so both
+ * routes read and write the row of whoever is signed in.
+ */
+export function registerProfileRoutes(app: App, { userRepository }: ProfileRouteDeps): void {
   app.get(
     '/profile',
     {
       schema: {
         tags: ['profile'],
-        summary: 'Read the owner profile',
+        summary: 'Read the signed-in account profile',
         response: { 200: profileSchema, 401: errorSchema },
       },
     },
-    () => profileRepository.read(),
+    (request) => ({ displayName: request.currentUser.displayName }),
   );
 
   app.patch(
@@ -25,19 +29,21 @@ export function registerProfileRoutes(app: App, { profileRepository }: ProfileRo
     {
       schema: {
         tags: ['profile'],
-        summary: 'Update the owner profile',
+        summary: 'Update the signed-in account profile',
         body: profileUpdateSchema,
         response: { 200: profileSchema, 401: errorSchema, 422: errorSchema },
       },
     },
-    (request) => {
+    async (request) => {
       // A blank field means "no name", not a name made of spaces.
       const displayName =
         request.body.displayName === null || request.body.displayName === ''
           ? null
           : request.body.displayName;
 
-      return profileRepository.write(displayName);
+      const updated = await userRepository.updateDisplayName(request.currentUser.id, displayName);
+
+      return { displayName: updated?.displayName ?? null };
     },
   );
 }

@@ -1,0 +1,29 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-6);
+}
+
+.card {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.title {
+  font-size: var(--text-3xl);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-8);
+  color: var(--color-text-muted);
+}
+
+.alternative {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}

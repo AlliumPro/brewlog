@@ -36,13 +36,13 @@ function assertMethodOther(method: string, methodOther: string | null): void {
 
 export function createRecipeService(repository: RecipeRepository) {
   return {
-    async list(): Promise<Recipe[]> {
-      const rows = await repository.list();
+    async list(userId: string): Promise<Recipe[]> {
+      const rows = await repository.list(userId);
       return rows.map(toRecipe);
     },
 
-    async get(id: string): Promise<Recipe> {
-      const row = await repository.findById(id);
+    async get(userId: string, id: string): Promise<Recipe> {
+      const row = await repository.findById(userId, id);
 
       if (row === undefined) {
         throw notFound('Recipe');
@@ -51,10 +51,10 @@ export function createRecipeService(repository: RecipeRepository) {
       return toRecipe(row);
     },
 
-    async create(input: RecipeCreate): Promise<Recipe> {
+    async create(userId: string, input: RecipeCreate): Promise<Recipe> {
       assertMethodOther(input.method, input.methodOther);
 
-      const duplicate = await repository.findByName(input.name);
+      const duplicate = await repository.findByName(userId, input.name);
 
       if (duplicate !== undefined) {
         throw conflict(`A recipe named "${input.name}" already exists`);
@@ -62,6 +62,7 @@ export function createRecipeService(repository: RecipeRepository) {
 
       const row = await repository.insert({
         id: uuidv7(),
+        userId,
         ...input,
         createdAt: new Date().toISOString(),
       });
@@ -69,8 +70,8 @@ export function createRecipeService(repository: RecipeRepository) {
       return toRecipe(row);
     },
 
-    async update(id: string, patch: RecipeUpdate): Promise<Recipe> {
-      const existing = await repository.findById(id);
+    async update(userId: string, id: string, patch: RecipeUpdate): Promise<Recipe> {
+      const existing = await repository.findById(userId, id);
 
       if (existing === undefined) {
         throw notFound('Recipe');
@@ -83,14 +84,14 @@ export function createRecipeService(repository: RecipeRepository) {
       assertMethodOther(method, methodOther);
 
       if (patch.name !== undefined && patch.name !== existing.name) {
-        const duplicate = await repository.findByName(patch.name);
+        const duplicate = await repository.findByName(userId, patch.name);
 
         if (duplicate !== undefined) {
           throw conflict(`A recipe named "${patch.name}" already exists`);
         }
       }
 
-      const row = await repository.update(id, patch);
+      const row = await repository.update(userId, id, patch);
 
       if (row === undefined) {
         throw notFound('Recipe');
@@ -99,8 +100,8 @@ export function createRecipeService(repository: RecipeRepository) {
       return toRecipe(row);
     },
 
-    async remove(id: string): Promise<void> {
-      const removed = await repository.remove(id);
+    async remove(userId: string, id: string): Promise<void> {
+      const removed = await repository.remove(userId, id);
 
       if (!removed) {
         throw notFound('Recipe');

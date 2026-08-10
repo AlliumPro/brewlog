@@ -21,3 +21,9 @@
   margin-bottom: var(--space-8);
   color: var(--color-text-muted);
 }
+
+.alternative {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}

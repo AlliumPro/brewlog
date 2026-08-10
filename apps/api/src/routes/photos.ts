@@ -43,7 +43,7 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
       // before this resolves, and sharp needs the whole image to sniff its real format.
       const buffer = await upload.toBuffer();
 
-      return brewService.attachPhoto(request.params.id, buffer);
+      return brewService.attachPhoto(request.currentUser.id, request.params.id, buffer);
     },
   );
 
@@ -65,7 +65,7 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
       },
     },
     async (request, reply) => {
-      const path = await brewService.photoPath(request.params.id);
+      const path = await brewService.photoPath(request.currentUser.id, request.params.id);
 
       return (
         reply
@@ -88,7 +88,7 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
       },
     },
     async (request, reply) => {
-      await brewService.detachPhoto(request.params.id);
+      await brewService.detachPhoto(request.currentUser.id, request.params.id);
       return reply.status(204).send(null);
     },
   );

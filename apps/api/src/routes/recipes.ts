@@ -24,7 +24,7 @@ export function registerRecipeRoutes(app: App, { recipeService }: RecipeRouteDep
         response: { 200: recipeListSchema, 401: errorSchema },
       },
     },
-    async () => ({ items: await recipeService.list() }),
+    async (request) => ({ items: await recipeService.list(request.currentUser.id) }),
   );
 
   app.post(
@@ -43,7 +43,7 @@ export function registerRecipeRoutes(app: App, { recipeService }: RecipeRouteDep
       },
     },
     async (request, reply) => {
-      const recipe = await recipeService.create(request.body);
+      const recipe = await recipeService.create(request.currentUser.id, request.body);
       return reply.status(201).send(recipe);
     },
   );
@@ -58,7 +58,7 @@ export function registerRecipeRoutes(app: App, { recipeService }: RecipeRouteDep
         response: { 200: recipeSchema, 401: errorSchema, 404: errorSchema },
       },
     },
-    (request) => recipeService.get(request.params.id),
+    (request) => recipeService.get(request.currentUser.id, request.params.id),
   );
 
   app.patch(
@@ -78,7 +78,7 @@ export function registerRecipeRoutes(app: App, { recipeService }: RecipeRouteDep
         },
       },
     },
-    (request) => recipeService.update(request.params.id, request.body),
+    (request) => recipeService.update(request.currentUser.id, request.params.id, request.body),
   );
 
   app.delete(
@@ -92,7 +92,7 @@ export function registerRecipeRoutes(app: App, { recipeService }: RecipeRouteDep
       },
     },
     async (request, reply) => {
-      await recipeService.remove(request.params.id);
+      await recipeService.remove(request.currentUser.id, request.params.id);
       return reply.status(204).send(null);
     },
   );

@@ -17,6 +17,6 @@ export function registerStatsRoutes(app: App, { statsService }: StatsRouteDeps):
         response: { 200: statsSchema, 401: errorSchema },
       },
     },
-    () => statsService.summary(),
+    (request) => statsService.summary(request.currentUser.id),
   );
 }
