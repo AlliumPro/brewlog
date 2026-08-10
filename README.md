@@ -56,8 +56,8 @@ docker compose up -d --build
 ```
 
 The image serves the API and the built SPA from one process on http://localhost:3000. It binds
-to the loopback interface on purpose: there is no TLS in front of it yet, so it must not listen
-on a public address.
+to the loopback interface on purpose — in production nginx terminates TLS and proxies to it, so
+the application port is never reachable from outside.
 
 ## Commands
 
@@ -149,6 +149,9 @@ deviates from the house defaults and why, is in [docs/adr/0001-stack.md](docs/ad
 
 ## Status
 
-Version 0.1.0 runs locally. Deployment to a server, TLS, metrics and alerting are not done —
-there is no server yet. The runbook says plainly which parts of the production posture are
-written but unproven.
+Live at https://brewlog.duckdns.org, deployed automatically from `main`. TLS, the firewall,
+key-only SSH and daily backups are in place and were exercised, not merely written.
+
+Still missing: metrics, log aggregation and alerting. **Nobody is watching this service** — if
+it falls over, the way you find out is by opening it. Backups also sit on the same host, so
+losing the host loses them too.
