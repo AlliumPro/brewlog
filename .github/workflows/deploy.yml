@@ -1,0 +1,149 @@
+# Every push to main goes to the server.
+#
+# The gate runs first: a push that fails verify is never built, never published and never
+# deployed. The image is built here rather than on the host — the server has one core and a
+# gigabyte, and `npm ci` plus two builds would take it out.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Deployments must not overlap: two runs racing to swap the same container leave the host in
+# whichever state finished last. Queued, not cancelled — a superseded deploy still has to
+# finish its rollback if it fails.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: https://brewlog.duckdns.org
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # setup-node ships npm 10 with Node 22; the lockfile is written by npm 11, which npm 10
+      # refuses to read in `ci` mode. Same pin as the Dockerfile.
+      - run: npm install -g npm@11.6.2
+
+      - run: npm ci
+
+      # Nothing reaches the server that has not passed the gate.
+      - run: npm run verify
+
+      - run: npm audit --omit=dev --audit-level=high
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tagged by commit sha, never by `latest` alone: the host pins an exact image so a
+      # rollback is a matter of restoring the previous tag rather than hoping a moving tag
+      # still points where it did.
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Deploy over SSH
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Through the environment, never interpolated into the script text: a private key is
+          # multi-line, and `${{ }}` would paste those newlines straight into the shell.
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          install -m 600 /dev/null key
+          printf '%s\n' "$SSH_KEY" > key
+          ssh-keyscan -H "$SSH_HOST" >> known_hosts 2>/dev/null
+
+          ssh -i key -o UserKnownHostsFile=known_hosts -o BatchMode=yes \
+            "$SSH_USER@$SSH_HOST" \
+            "IMAGE='$IMAGE' ACTOR='$ACTOR' TOKEN='$REGISTRY_TOKEN' DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+
+          # The tag currently running, so a failed deploy has somewhere to go back to.
+          PREVIOUS=$(grep '^BREWLOG_IMAGE=' .env | cut -d= -f2-)
+          echo "running now:  $PREVIOUS"
+          echo "deploying:    $IMAGE"
+
+          # A short-lived token from this workflow run, not a long-lived one stored on the host.
+          echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin >/dev/null
+
+          docker pull "$IMAGE" >/dev/null
+          echo "BREWLOG_IMAGE=$IMAGE" > .env
+          docker compose up -d
+
+          # Readiness, not liveness: this answers only once migrations have been applied.
+          for attempt in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/ready; then
+              echo "ready after ${attempt} attempt(s)"
+              docker logout ghcr.io >/dev/null 2>&1 || true
+              # Keep the last few images for rollback, drop everything older.
+              docker image prune -af --filter 'until=168h' >/dev/null 2>&1 || true
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "::error::the new image never became ready — rolling back to $PREVIOUS"
+          docker compose logs --tail 40 app || true
+          echo "BREWLOG_IMAGE=$PREVIOUS" > .env
+          docker compose up -d
+          docker logout ghcr.io >/dev/null 2>&1 || true
+          exit 1
+          REMOTE
+
+      - name: Check the site answers over HTTPS
+        run: |
+          # From outside the host: proves nginx, the certificate and the proxy path, none of
+          # which the loopback check above can see.
+          for attempt in $(seq 1 10); do
+            code=$(curl -fsS -o /dev/null -w '%{http_code}' https://brewlog.duckdns.org/health || true)
+            if [ "$code" = "200" ]; then
+              echo "https://brewlog.duckdns.org/health → 200"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::the site did not answer over HTTPS after the deploy"
+          exit 1
