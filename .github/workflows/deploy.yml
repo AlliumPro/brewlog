@@ -92,8 +92,11 @@ jobs:
           # multi-line, and `${{ }}` would paste those newlines straight into the shell.
           SSH_KEY: ${{ secrets.SSH_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          # Neither of these is a secret, and making them one actively hurt: GitHub masks
+          # secret values in logs, so a wrong path showed up as *** and the failure said only
+          # "cd: ***: No such file or directory".
+          SSH_USER: deploy
+          DEPLOY_PATH: /opt/brewlog
           ACTOR: ${{ github.actor }}
         run: |
           install -m 600 /dev/null key
