@@ -1,179 +1,177 @@
 # Runbook
 
-**Scope note.** This version runs locally through `docker compose`. There is no VPS, no domain
-and no TLS yet, and no metrics or log aggregation — phases 7 and 8 of the pipeline were left out
-because there is no server to deploy to. Everything below is written for the local stack; the
-parts that will change when a server appears are marked.
+BrewLog runs on **Vercel** (static SPA on the CDN, one serverless function for the API) with a
+**Neon** Postgres database. The decision and what it cost are in
+[adr/0003-vercel-and-postgres.md](adr/0003-vercel-and-postgres.md).
+
+**Nothing here has been run against the live deployment yet.** The code, the migrations and the
+function as Vercel's own builder packages it were tested locally; the first real deploy is the
+open item in the checklist below. Treat every step as unverified until it is ticked.
 
 ## Where things are
 
-| Thing             | Location                                                             |
-| ----------------- | -------------------------------------------------------------------- |
-| Application logs  | `docker compose logs -f app` — structured JSON, one line per request |
-| Database          | the `brewlog-data` volume, file `/data/brewlog.db`                   |
-| Photos            | the same volume, `/data/uploads`                                     |
-| Configuration     | `.env` beside `docker-compose.yml`, never in git                     |
-| API documentation | `http://localhost:3000/docs`, behind basic auth outside development  |
+| Thing             | Location                                                                     |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Site              | https://brewlog.hmstd.dev                                                    |
+| Static files      | `apps/web/dist`, served by Vercel's CDN                                      |
+| API               | one function, `api/index.ts` → `apps/api/src/vercel.ts`; region `fra1`       |
+| Database          | Neon project, Postgres — brews, recipes, accounts, photos and limiter state  |
+| Application logs  | Vercel dashboard → the project → Logs. Structured JSON, one line per request |
+| Configuration     | Vercel project settings → Environment Variables. Never in git                |
+| DNS               | `hmstd.dev` is at Cloudflare; `brewlog` points at Vercel, **DNS only**       |
+| API documentation | `https://brewlog.hmstd.dev/docs`, behind basic auth                          |
+
+Photos are rows in `brew_photos` (re-encoded WebP, a few hundred kilobytes each). There is no
+disk anywhere: a serverless function can write a file, but the next invocation will not see it.
+
+## First-time setup — and the checklist that makes the status honest
+
+1. **Neon.** Create a project. Choose the AWS Frankfurt region (`eu-central-1`) so the database
+   sits next to the function (`regions` in `vercel.json` is `fra1`). Copy the **pooled**
+   connection string — the host contains `-pooler` — which ends in `?sslmode=require`.
+   A serverless fleet opens many short connections; the pooler is what keeps them from
+   exhausting the database.
+2. **Vercel.** Import the repository. On the import screen:
+   - Root Directory: `./`
+   - Application Preset: **Other**. Not "Services": `vercel.json` already says how to build and
+     where the function is, and the Services preset would split `api` and `web` into separate
+     projects that the rewrites in `vercel.json` do not expect.
+   - Environment Variables (Production):
+     `DATABASE_URL` (the Neon string), `SESSION_SECRET` (`openssl rand -hex 32`),
+     `SWAGGER_USER`, `SWAGGER_PASSWORD`.
+   - For Preview deployments use a **separate Neon branch** and its connection string. Otherwise
+     every pull request's preview talks to production data.
+3. **Domain.** Project → Settings → Domains → add `brewlog.hmstd.dev`. In Cloudflare add the
+   record Vercel shows (a CNAME for a subdomain) with the proxy **off** (grey cloud). Vercel
+   issues the certificate itself; a Cloudflare proxy in front would hide real client addresses
+   from the rate limiter and fight Vercel over TLS.
+4. **First deploy and smoke.** Merge to `main`, wait for the deployment, then:
+
+   ```bash
+   SMOKE_URL=https://brewlog.hmstd.dev SMOKE_ALLOW_REGISTER=1 \
+     SWAGGER_USER=… SWAGGER_PASSWORD=… npm run smoke
+   ```
+
+   This is the only check of what the local runs cannot reach: the rewrites in `vercel.json`,
+   the CSP header on the static site, the Vercel function runtime, the real Neon connection.
+   It registers a throwaway account — acceptable once on a fresh database, not as a habit.
+
+5. **Open it by hand** on a phone: register, log a brew, attach a photo if the UI offers one,
+   reload on a deep link such as `/stats`, install the PWA.
+6. **GitHub.** Settings → Branches → protect `main` and require the `verify` and `smoke` checks.
+   Vercel deploys every push to `main` regardless of what CI says; the protection is what stops a
+   red commit reaching `main` in the first place.
+
+Once 4 and 5 pass, update the Status section of the README. Until then it says unverified, and
+it should.
 
 ## Health
 
 ```bash
-curl -s http://localhost:3000/health   # the process is alive
-curl -s http://localhost:3000/ready    # the database answers and migrations are applied
+curl -s https://brewlog.hmstd.dev/health   # the function answers
+curl -s https://brewlog.hmstd.dev/ready    # the database answers and migrations are applied
 ```
 
-`/ready` returning 503 with `{"status":"degraded"}` means the process is up but the database is
-not usable — usually a missing volume or an unapplied migration.
+`/ready` returning 503 with `{"status":"degraded"}` means the function is up but the database is
+not usable: Neon unreachable, a wrong `DATABASE_URL`, or a migration that failed.
 
 ## It will not start
 
-Read the first lines of `docker compose logs app`. The two common causes:
+The API answers every request with `503 {"error":{"code":"unavailable",…}}` when it could not boot.
+The reason is in the function logs, on a line starting `failed to start:`. Two common causes:
 
-**`Invalid environment configuration`** — a required variable is missing or too short. The message
-names the variables, never their values. Fill them in `.env`:
+**`Invalid environment configuration`** — a variable is missing, too short, or `DATABASE_URL` is
+not a `postgres://` string. The message names the variables, never their values. Fix it in
+Vercel → Environment Variables and **redeploy**: a changed variable only reaches new deployments.
 
-```bash
-# generate a password hash (12 characters minimum, a passphrase works best)
-printf '%s' 'your passphrase here' | npm run auth:hash --workspace @brewlog/api
+**A connection error** — Neon is unreachable or the string is wrong. Check the Neon console for
+the project's status. A cold free-tier database takes a moment to wake; the next request retries
+because a failed boot is never cached.
 
-# generate a session secret
-openssl rand -hex 32
-```
+## Migrations
 
-**A native module fails to load** (`better-sqlite3`, `sharp`) — the image was built on a different
-C library than it runs on. Rebuild it rather than patching around it:
+They run inside the function, on the first request after a deploy that carries a new one, under
+a Postgres advisory lock so that several cold starts at once do not collide. There is no
+separate migrate step to forget.
 
-```bash
-docker compose build --no-cache app
-```
-
-## It starts but every request answers 401
-
-Expected when there is no session. If logging in also fails:
-
-- After five wrong attempts in fifteen minutes the answer becomes 429. Wait it out; the window
-  is per IP and clears on its own.
-- If the password is genuinely lost, generate a new hash, replace `AUTH_PASSWORD_HASH` in `.env`
-  and restart. Existing sessions survive that, because they live in the database — see below to
-  end them all.
-
-```bash
-# end every session immediately
-docker compose exec app node -e "const D=require('better-sqlite3');new D('/data/brewlog.db').prepare('delete from sessions').run()"
-```
+**They are forward-only.** Rolling the code back does not undo a migration. Before shipping a
+destructive one, make a restore point (below) — this is the one case where a rollback alone
+will not save you.
 
 ## Backup and restore
 
-`/usr/local/bin/brewlog-backup` runs on the host daily at 03:17 and keeps seven days in
-`/opt/brewlog/backups`.
+Neon keeps a history of the database and can restore to a point in it, or branch from one. The
+**length of that window depends on the plan** — check it in the Neon console before relying on
+it; on the free plan it is short. It is the first line of defence, not a substitute for a copy
+held somewhere else.
 
-It uses `VACUUM INTO` rather than copying the file: a copy of a live database can catch it
-mid-transaction. It reads the Docker volume directly rather than going through the application
-image, because that image is private and the host is logged out of the registry between
-deploys — a backup must not depend on registry access.
-
-```bash
-ssh root@95.182.88.29
-/usr/local/bin/brewlog-backup          # run one now
-ls -lh /opt/brewlog/backups
-```
-
-Restoring replaces the current data, so copy it aside first:
+A copy you hold yourself, from any machine with `pg_dump`:
 
 ```bash
-ssh root@95.182.88.29
-cd /opt/brewlog
-docker compose down
-VOL=$(docker volume inspect brewlog_brewlog-data --format '{{.Mountpoint}}')
-cp "$VOL/brewlog.db" "$VOL/brewlog.db.before-restore"
-gunzip -c backups/brewlog-<stamp>.db.gz > "$VOL/brewlog.db"
-# The WAL files describe the replaced database and must not outlive it
-rm -f "$VOL/brewlog.db-wal" "$VOL/brewlog.db-shm"
-docker compose up -d
-curl -fsS localhost:3000/ready
+pg_dump "$DATABASE_URL" --format=custom --file=brewlog-$(date +%F).dump
 ```
 
-**Rehearsed on 2026-08-10**: a snapshot was taken, unzipped and read back — five tables
-present. Photos are not in these snapshots; they live in the same volume and are covered by a
-volume-level copy, which has not been rehearsed.
+Restoring replaces data, so restore into a **new Neon branch** first and look at it:
+
+```bash
+pg_restore --no-owner --dbname="$NEW_BRANCH_URL" brewlog-<date>.dump
+```
+
+Neither has been rehearsed against this deployment. The old procedure (daily `VACUUM INTO` on the
+VPS) went away with the server.
 
 ## Rolling back
 
-The tag now running is in `/opt/brewlog/.env`, and every image deployed in the last week is
-still on the host.
+Vercel keeps every deployment. Project → Deployments → pick the last good one → Promote to
+Production (Instant Rollback). The previous code is live in seconds.
 
-```bash
-ssh deploy@95.182.88.29
-cd /opt/brewlog
-docker images 'ghcr.io/alliumpro/brewlog' --format '{{.Tag}}	{{.CreatedSince}}'
-echo 'BREWLOG_IMAGE=ghcr.io/alliumpro/brewlog:<tag>' > .env
-docker compose up -d
-curl -fsS localhost:3000/ready
+Reverting the commit on `main` is usually the better move: it redeploys the earlier code through
+the same pipeline and leaves `main` describing what is actually running.
+
+Remember the migration caveat above: rolling back code past a migration leaves the new schema in
+place.
+
+## Locked out by the rate limiter
+
+Five credential attempts per quarter hour per address, counted in the `rate_limits` table. The
+counter survives restarts and redeploys now — it has to, because a function instance forgets
+everything between requests. To clear it, in the Neon SQL editor:
+
+```sql
+delete from rate_limits;
 ```
 
-The deploy workflow does this by itself when a new image never becomes ready, so a rollback by
-hand is only needed for a fault that appears later.
+## Ending every session
 
-Reverting the commit on `main` is usually the better move: it redeploys the earlier code
-through the same pipeline and leaves `main` describing what is actually running.
+A password change already does this for one account. To end every session for everyone, bump all
+token versions in the Neon SQL editor:
 
-**Migrations run at startup and are forward-only.** Rolling the code back to before a migration
-does not undo it. If a migration is destructive, take a backup before deploying it — this is the
-one case where rollback alone will not save you.
-
-## Destructive commands, and what they actually do
-
-| Command                           | Consequence                                                               |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| `docker compose down`             | Stops and removes containers. **Data survives** — it is in a named volume |
-| `docker compose down -v`          | Also removes the volume: **the journal and every photo are gone**         |
-| `docker compose build --no-cache` | Slow, harmless                                                            |
-| Deleting `/data/uploads`          | Photos gone; the brews keep their rows and show no image                  |
-
-## The live deployment
-
-|             |                                                                   |
-| ----------- | ----------------------------------------------------------------- |
-| Site        | https://brewlog.duckdns.org                                       |
-| Host        | 95.182.88.29 — Ubuntu 24.04, 1 vCPU, 961 MB, 10 GB                |
-| Application | `/opt/brewlog`, owned by `deploy`                                 |
-| Container   | one, published on `127.0.0.1:3000` only; nginx faces the internet |
-| Data        | Docker volume `brewlog_brewlog-data` — database and photos        |
-| Certificate | Let's Encrypt via certbot, renewed by a systemd timer             |
-
-Access is by key only, passwords are refused, and `ufw` admits 22, 80 and 443. Two keys reach
-`deploy`: the owner's and a separate one used solely by GitHub Actions. `root` accepts the
-owner's key alone.
-
-Every push to `main` deploys itself: the gate runs, the image is built and scanned in CI,
-pushed to GHCR tagged by commit sha, pulled on the host, and the job waits for `/ready` before
-declaring success. Nothing is built on the server — one core and a gigabyte would not survive
-`npm ci` plus two builds.
-
-### When the site is down
-
-```bash
-ssh deploy@95.182.88.29
-docker compose -f /opt/brewlog/docker-compose.yml ps
-docker compose -f /opt/brewlog/docker-compose.yml logs --tail 100 app
-curl -fsS localhost:3000/ready     # the app itself, bypassing nginx
-systemctl status nginx             # proxy and certificate
-free -m                            # 512 MB is the container's ceiling
+```sql
+update users set token_version = token_version + 1;
 ```
 
-If `/ready` answers on the loopback but the site does not, the fault is nginx or the
-certificate, not the application.
+Everyone signs in again. To rotate the signing key instead, change `SESSION_SECRET` and redeploy.
 
-### Locked out by the rate limiter
+## Destructive operations — ask first
 
-Five login attempts per quarter hour per address. The counter lives in memory:
+| Operation                                    | Consequence                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| Deleting the Neon project or its main branch | **Every journal and photo is gone**, along with the history              |
+| `drop table`, `truncate`, `delete from …`    | Rows are gone; recovery is a point-in-time restore, if the window allows |
+| `delete from brew_photos`                    | Photos gone; the brews keep their rows and show no image                 |
+| Changing `SESSION_SECRET`                    | Every session ends; nothing is lost                                      |
+| Removing the Vercel project                  | The site goes down; the database is untouched                            |
+| A migration that drops a column or a table   | Not reversible by rolling the code back. Restore point first             |
 
-```bash
-docker compose -f /opt/brewlog/docker-compose.yml restart app
-```
+## The old server
 
-### Still missing
+The VPS and `brewlog.duckdns.org` are decommissioned. The data that lived there was deleted
+along with the server and **was not carried over** — the Neon database started empty, and so did
+every account. The SSH keys, the nginx configuration, the certbot timer and the backup script
+described in earlier versions of this document no longer exist.
 
-No metrics, no log aggregation, no alerting — phase 8. **Nobody is watching this service.** If
-it falls over, the way you find out is by opening it. Backups stay on the same host, so a
-failure of the host loses them with it.
+## Still missing
+
+No metrics, no log aggregation beyond what Vercel retains, no alerting. **Nobody is watching this
+service.** If it falls over, the way you find out is by opening it. Backups are Neon's own history
+plus whatever `pg_dump` you take by hand; none has been rehearsed.

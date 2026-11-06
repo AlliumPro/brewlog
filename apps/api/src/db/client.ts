@@ -1,18 +1,20 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 
-import * as schema from './schema.js';
+import type * as schema from './schema.js';
 
-export function createDb(url: string) {
-  const sqlite = new Database(url);
+/**
+ * The one type every repository depends on. It names the Postgres dialect rather than a
+ * driver, so the same code runs on `pg` against Neon in production and on PGlite — Postgres
+ * compiled to WebAssembly — in tests and local development.
+ */
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-  // WAL lets a read run while a write is in flight; without it a single slow write blocks reads.
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
-  // Wait rather than fail immediately when the file is briefly locked.
-  sqlite.pragma('busy_timeout = 5000');
-
-  return drizzle(sqlite, { schema });
+/** A database together with the one thing the caller must eventually do to it. */
+export interface Database {
+  db: Db;
+  close: () => Promise<void>;
 }
 
-export type Db = ReturnType<typeof createDb>;
+export function isPostgresUrl(url: string): boolean {
+  return url.startsWith('postgres://') || url.startsWith('postgresql://');
+}

@@ -1,8 +1,8 @@
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-
+import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 
+import type { Db } from '../db/client.js';
+import { brewPhotos } from '../db/schema.js';
 import { unsupportedMedia } from '../lib/errors.js';
 
 const MAX_LONG_SIDE = 1600;
@@ -14,21 +14,19 @@ const MAX_LONG_SIDE = 1600;
  */
 const ACCEPTED_FORMATS = new Set(['jpeg', 'jpg', 'png', 'webp', 'avif', 'gif', 'tiff']);
 
-export function createPhotoService(uploadDir: string) {
-  const directory = resolve(uploadDir);
-  const pathFor = (brewId: string): string => join(directory, `${brewId}.webp`);
-
+/**
+ * Photos are rows, not files: the host has no persistent disk. Ownership is not checked here —
+ * callers resolve the brew through the owner-scoped repository first, and only then ask for
+ * its photo by brew id.
+ */
+export function createPhotoService(db: Db) {
   return {
-    pathFor,
-
     /**
      * Re-encodes to WebP and drops every piece of metadata. Phone photos carry GPS
      * coordinates in EXIF — for a cup photographed at home, that is the owner's address.
-     * The original file is never written to disk.
+     * The original is never stored.
      */
-    async store(brewId: string, input: Buffer): Promise<string> {
-      await mkdir(directory, { recursive: true });
-
+    async store(brewId: string, input: Buffer): Promise<void> {
       const image = sharp(input, { failOn: 'error' });
 
       // The format comes from the bytes, not from the filename or the client's content type.
@@ -40,7 +38,7 @@ export function createPhotoService(uploadDir: string) {
         throw unsupportedMedia(`Unsupported image format: ${format}`);
       }
 
-      const output = await image
+      const data = await image
         // Applies EXIF orientation before the metadata is discarded, otherwise portrait
         // photos would come out rotated.
         .rotate()
@@ -53,18 +51,24 @@ export function createPhotoService(uploadDir: string) {
         .webp({ quality: 82 })
         .toBuffer();
 
-      const path = pathFor(brewId);
-      await writeFile(path, output);
+      await db
+        .insert(brewPhotos)
+        .values({ brewId, data })
+        .onConflictDoUpdate({ target: brewPhotos.brewId, set: { data } });
+    },
 
-      return path;
+    async read(brewId: string): Promise<Buffer | undefined> {
+      const [row] = await db
+        .select({ data: brewPhotos.data })
+        .from(brewPhotos)
+        .where(eq(brewPhotos.brewId, brewId))
+        .limit(1);
+
+      return row?.data;
     },
 
     async remove(brewId: string): Promise<void> {
-      try {
-        await unlink(pathFor(brewId));
-      } catch {
-        // Already gone is the desired end state, not an error worth surfacing.
-      }
+      await db.delete(brewPhotos).where(eq(brewPhotos.brewId, brewId));
     },
   };
 }

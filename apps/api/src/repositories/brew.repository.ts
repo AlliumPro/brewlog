@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client.js';
 import { brews } from '../db/schema.js';
@@ -7,10 +7,6 @@ import type { BrewListQuery } from '../domain/brew.js';
 
 /**
  * SQL only. Computed fields, mapping and invariants belong to the service layer.
- *
- * Note on search: SQLite's LIKE is case-insensitive for ASCII only, so a Cyrillic bean name
- * matches case-sensitively. Acceptable for a single-user journal; fixing it would mean an
- * FTS5 table or a normalised search column.
  */
 export function createBrewRepository(db: Db) {
   /**
@@ -33,7 +29,7 @@ export function createBrewRepository(db: Db) {
       const pattern = `%${query.q}%`;
       // or() is typed as possibly undefined because it accepts an empty list; with two
       // arguments it never is.
-      const search = or(like(brews.beanName, pattern), like(brews.roaster, pattern));
+      const search = or(ilike(brews.beanName, pattern), ilike(brews.roaster, pattern));
 
       if (search !== undefined) {
         conditions.push(search);
@@ -120,7 +116,7 @@ export function createBrewRepository(db: Db) {
       const conditions = [eq(brews.userId, userId), sql`${column} is not null`];
 
       if (q !== undefined) {
-        conditions.push(like(column, `%${q}%`));
+        conditions.push(ilike(column, `%${q}%`));
       }
 
       const rows = await db

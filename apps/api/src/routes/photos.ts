@@ -1,5 +1,3 @@
-import { createReadStream } from 'node:fs';
-
 import { z } from 'zod';
 
 import type { App } from '../app.js';
@@ -27,7 +25,7 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
           200: brewSchema,
           401: errorSchema,
           404: errorSchema,
-          413: errorSchema.describe('File larger than 5 MB'),
+          413: errorSchema.describe('File larger than 4 MB'),
           415: errorSchema.describe('Not a supported image format'),
         },
       },
@@ -39,7 +37,7 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
         throw unprocessable('Expected a single file field');
       }
 
-      // Buffered rather than streamed: the 5 MB limit is enforced by the multipart plugin
+      // Buffered rather than streamed: the 4 MB limit is enforced by the multipart plugin
       // before this resolves, and sharp needs the whole image to sniff its real format.
       const buffer = await upload.toBuffer();
 
@@ -56,8 +54,8 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
         description: 'Served behind the session gate, so a leaked path does not leak the photo.',
         params: idParamSchema,
         response: {
-          // Declared as unknown because the body is image bytes, not JSON. Fastify pipes a
-          // stream straight through without invoking the serialiser.
+          // Declared as unknown because the body is image bytes, not JSON. A Buffer is sent as it
+          // is, without invoking the serialiser.
           200: z.unknown().describe('WebP image bytes'),
           401: errorSchema,
           404: errorSchema,
@@ -65,14 +63,14 @@ export function registerPhotoRoutes(app: App, { brewService }: PhotoRouteDeps): 
       },
     },
     async (request, reply) => {
-      const path = await brewService.photoPath(request.currentUser.id, request.params.id);
+      const data = await brewService.photo(request.currentUser.id, request.params.id);
 
       return (
         reply
           .type('image/webp')
           // Private: the photo is behind authentication and must not sit in a shared cache.
           .header('Cache-Control', 'private, max-age=3600')
-          .send(createReadStream(path))
+          .send(data)
       );
     },
   );

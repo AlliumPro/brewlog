@@ -1,7 +1,8 @@
 # Architecture
 
-One repository, two applications, one container. The API serves both the JSON endpoints and the
-built single-page app, so there is nothing to keep in sync between two deployments.
+One repository, two applications, one deployment. The SPA is static files on Vercel's CDN and the
+API is a single serverless function on the same origin, so there is nothing to keep in sync
+between two hosts and no CORS to configure.
 
 ## Request flow
 
@@ -9,30 +10,32 @@ built single-page app, so there is nothing to keep in sync between two deploymen
 flowchart TB
     Browser["Browser<br/>React SPA"]
 
-    subgraph Container["Container — one process"]
+    subgraph Vercel["Vercel"]
         direction TB
-        Static["@fastify/static<br/>built SPA + index.html fallback"]
-        Gate["onRequest hook<br/>session cookie required"]
-        Routes["Routes<br/>Zod schema per endpoint"]
-        Services["Services<br/>invariants, computed fields"]
-        Repos["Repositories<br/>Drizzle queries"]
+        CDN["CDN<br/>built SPA, rewrite to index.html<br/>CSP and cache headers from vercel.json"]
+
+        subgraph Function["Serverless function — api/index.ts"]
+            direction TB
+            Gate["onRequest hook<br/>session cookie required"]
+            Routes["Routes<br/>Zod schema per endpoint"]
+            Services["Services<br/>invariants, computed fields, sharp"]
+            Repos["Repositories<br/>Drizzle queries"]
+        end
     end
 
-    DB[("SQLite<br/>/data/brewlog.db")]
-    Files[("Photos<br/>/data/uploads")]
+    DB[("Neon Postgres<br/>brews, recipes, users,<br/>photos, rate limits")]
 
-    Browser -->|"GET /, /brews/:id"| Static
-    Browser -->|"/api/**"| Gate
+    Browser -->|"GET /, /brews/:id"| CDN
+    Browser -->|"/api/**, /health, /ready, /docs"| Gate
     Gate -->|"401 without a valid session"| Browser
     Gate --> Routes
     Routes --> Services
     Services --> Repos
-    Services --> Files
     Repos --> DB
 ```
 
 The gate sits over the whole `/api` scope and is opt-**out**: a route is protected unless it
-declares `config: { public: true }`. Only the login, the logout and the two health probes do.
+declares `config: { public: true }`. Only registration, login, logout and the two health probes do.
 
 ## Layers on the server
 
@@ -100,6 +103,7 @@ time rather than as a blank field in production.
 
 ## What is deliberately absent
 
-No CORS configuration — the SPA and the API share an origin. No message queue, no cache layer, no
-container for the database: SQLite is a file, and a single-user journal has no concurrency to
-manage. No user table: there is one password and no accounts.
+No CORS configuration — the SPA and the API share an origin. No message queue and no cache
+layer. No object storage: photos are rows in `brew_photos`, which keeps them behind the session
+gate and lets a brew's deletion cascade to them. No long-lived process and no disk: anything that
+must outlive a request — accounts, the rate limiter's counters, photos — lives in Postgres.

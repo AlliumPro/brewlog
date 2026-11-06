@@ -1,78 +1,47 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { buildApp } from '../app.js';
 import type { App } from '../app.js';
 import { loadEnv } from '../config/env.js';
-import { createDb } from '../db/client.js';
-import { runMigrations } from '../db/migrate.js';
+import type { Db } from '../db/client.js';
+import { openDatabase } from '../db/open.js';
 
 export const TEST_PASSWORD = 'a stubbornly long test password';
 
-/** Stands in for the theme applier that the real index.html carries. */
-export const TEST_INLINE_SCRIPT = 'document.documentElement.dataset.theme = "dark";';
-
 export interface TestContext {
   app: App;
-  uploadDir: string;
+  db: Db;
   close: () => Promise<void>;
 }
 
 /**
- * A fresh in-memory database and a throwaway upload directory per suite, so tests cannot
- * see each other's data and the rate limiter starts from zero in each file.
+ * A fresh in-memory Postgres per suite, so tests cannot see each other's data and the rate
+ * limiter starts from zero in each file. It is PGlite — the real Postgres engine compiled to
+ * WebAssembly — so the SQL under test is the SQL production runs, not a stand-in dialect.
  */
 export async function createTestApp(
-  options: { withStatic?: boolean; authRateLimitMax?: number } = {},
+  options: { authRateLimitMax?: number } = {},
 ): Promise<TestContext> {
-  const uploadDir = await mkdtemp(join(tmpdir(), 'brewlog-test-'));
-
-  // A stand-in for apps/web/dist, so the static-serving behaviour can be tested without
-  // building the frontend first.
-  let staticDir: string | undefined;
-
-  if (options.withStatic === true) {
-    staticDir = await mkdtemp(join(tmpdir(), 'brewlog-static-'));
-    // The inline script mirrors the real page: the theme applier has to run before first
-    // paint, so the CSP has to carry its hash.
-    await writeFile(
-      join(staticDir, 'index.html'),
-      `<!doctype html><html><head><script>${TEST_INLINE_SCRIPT}</script></head>` +
-        '<body><div id="root"></div></body></html>',
-      'utf8',
-    );
-  }
-
   const env = loadEnv({
     ...process.env,
     NODE_ENV: 'test',
-    DATABASE_URL: ':memory:',
-    UPLOAD_DIR: uploadDir,
+    DATABASE_URL: 'memory://',
     LOG_LEVEL: 'silent',
     // Raised out of the way by default: a suite creates more accounts in a minute than the
     // production limit allows in a quarter of an hour. One test lowers it back to assert the
     // lockout itself.
     AUTH_RATE_LIMIT_MAX: String(options.authRateLimitMax ?? 1000),
-    ...(staticDir === undefined ? {} : { STATIC_DIR: staticDir }),
   });
 
-  const db = createDb(env.DATABASE_URL);
-  runMigrations(db);
+  const { db, close } = await openDatabase(env.DATABASE_URL);
 
   const app = await buildApp({ env, db });
   await app.ready();
 
   return {
     app,
-    uploadDir,
+    db,
     async close() {
       await app.close();
-      await rm(uploadDir, { recursive: true, force: true });
-
-      if (staticDir !== undefined) {
-        await rm(staticDir, { recursive: true, force: true });
-      }
+      await close();
     },
   };
 }

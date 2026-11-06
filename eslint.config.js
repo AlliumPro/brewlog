@@ -79,6 +79,12 @@ export default tseslint.config(
     },
   },
 
+  // Plain scripts served as-is from public/: no bundler, so no TypeScript and no imports.
+  {
+    files: ['apps/web/public/**/*.js'],
+    languageOptions: { globals: globals.browser, sourceType: 'script' },
+  },
+
   // Build-time config files inside the workspaces run in Node, not in the browser.
   {
     files: ['apps/*/vite.config.ts', 'apps/*/vitest.config.ts', 'apps/*/drizzle.config.ts'],
@@ -121,7 +127,7 @@ export default tseslint.config(
 
   // Root tooling and scripts: no type information available, Node globals.
   {
-    files: ['*.js', '*.ts', 'scripts/**/*.js'],
+    files: ['*.js', '*.ts', 'scripts/**/*.js', 'api/**/*.ts'],
     rules: {
       // These are CLI scripts; stdout is how they report.
       'no-console': 'off',
