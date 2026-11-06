@@ -19,6 +19,9 @@ apps/web/dist/
 data/
 uploads/
 
+# Vercel CLI link and local build output
+.vercel/
+
 # Test and tooling artefacts
 coverage/
 .vitest/

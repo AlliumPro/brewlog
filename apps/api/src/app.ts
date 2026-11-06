@@ -1,12 +1,8 @@
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { resolve } from 'node:path';
 
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
-import fastifyStatic from '@fastify/static';
 import { count } from 'drizzle-orm';
 import Fastify from 'fastify';
 import type { FastifyBaseLogger, FastifyError, FastifyInstance, RawServerDefault } from 'fastify';
@@ -15,7 +11,8 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 import type { Env } from './config/env.js';
 import type { Db } from './db/client.js';
-import { sessions } from './db/schema.js';
+import { users } from './db/schema.js';
+import { createRateLimitStore } from './lib/rate-limit-store.js';
 import { authPlugin } from './plugins/auth.js';
 import { swaggerPlugin } from './plugins/swagger.js';
 import { createBrewRepository } from './repositories/brew.repository.js';
@@ -44,33 +41,11 @@ export type App = FastifyInstance<
   ZodTypeProvider
 >;
 
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-
 /**
- * The page carries one inline script: the theme applier, which has to run before first paint
- * and therefore cannot be an external module. Under `script-src 'self'` the browser refuses
- * it, and the theme flashes.
- *
- * The hash is computed from the file this server actually serves, so it cannot drift from the
- * script the way a value pasted into the config would. `'unsafe-inline'` would solve the same
- * problem by disabling the protection.
+ * Vercel refuses a request body over 4.5 MB before the function sees it, so a larger limit here
+ * would be a promise the platform breaks first with an HTML error page.
  */
-function inlineScriptHashes(staticDir: string): string[] {
-  const html = readFileSync(resolve(staticDir, 'index.html'), 'utf8');
-  const hashes: string[] = [];
-
-  for (const match of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
-    const body = match[1];
-
-    if (body === undefined || body.trim() === '') {
-      continue;
-    }
-
-    hashes.push(`'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
-  }
-
-  return hashes;
-}
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 
 export interface BuildAppOptions {
   env: Env;
@@ -131,34 +106,11 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
     });
   });
 
-  /**
-   * In the container the API also serves the built SPA. A client-side route such as
-   * /brews/abc is not a file, so anything that is not an API path falls back to index.html
-   * and React Router takes over. API paths keep answering with the JSON envelope, because a
-   * fetch that silently receives HTML is far harder to debug than a 404.
-   */
-  if (env.STATIC_DIR !== undefined) {
-    await app.register(fastifyStatic, {
-      root: resolve(env.STATIC_DIR),
-      // `index: false` makes a request for "/" a directory listing request, which the plugin
-      // refuses with 403 — so the site's front page was the one URL that did not work.
-      index: ['index.html'],
-    });
-  }
-
-  app.setNotFoundHandler((request, reply) => {
-    const isApiPath =
-      request.url.startsWith('/api') ||
-      request.url.startsWith('/health') ||
-      request.url.startsWith('/ready') ||
-      request.url.startsWith('/docs');
-
-    if (env.STATIC_DIR !== undefined && request.method === 'GET' && !isApiPath) {
-      return reply.sendFile('index.html');
-    }
-
-    return reply.status(404).send({ error: { code: 'not_found', message: 'Resource not found' } });
-  });
+  // The SPA is static files served by the platform's CDN; this function only ever answers API
+  // paths, so an unknown one is a JSON 404, never a page.
+  app.setNotFoundHandler((_request, reply) =>
+    reply.status(404).send({ error: { code: 'not_found', message: 'Resource not found' } }),
+  );
 
   // Dependency graph, wired once. Repositories talk SQL, services own the rules.
   const brewRepository = createBrewRepository(db);
@@ -166,21 +118,19 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
   const userRepository = createUserRepository(db);
   const statsRepository = createStatsRepository(db);
 
-  const photoService = createPhotoService(env.UPLOAD_DIR);
+  const photoService = createPhotoService(db);
   const brewService = createBrewService(brewRepository, photoService);
   const recipeService = createRecipeService(recipeRepository);
   const statsService = createStatsService(statsRepository);
   const authService = createAuthService(userRepository);
 
-  const scriptHashes = env.STATIC_DIR === undefined ? [] : inlineScriptHashes(env.STATIC_DIR);
-
   await app.register(helmet, {
-    // The SPA is served from the same origin in production; scripts and styles are bundled
-    // assets, and no third-party host is contacted at runtime.
+    // These headers cover the API and the docs. The SPA's own CSP is set in vercel.json,
+    // because its files never pass through this function.
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", ...scriptHashes],
+        scriptSrc: ["'self'"],
         // Stylesheets themselves are bundled files, so no inline <style> is allowed.
         styleSrc: ["'self'"],
         // Radix primitives position their popovers by writing to the element's style
@@ -209,7 +159,7 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
    */
   const isReady = async (): Promise<boolean> => {
     try {
-      await db.select({ value: count() }).from(sessions);
+      await db.select({ value: count() }).from(users);
       return true;
     } catch {
       return false;
@@ -225,8 +175,11 @@ export async function buildApp({ env, db }: BuildAppOptions): Promise<App> {
       await api.register(rateLimit, {
         max: 300,
         timeWindow: '1 minute',
-        // The journal is single-user; a global ceiling is a backstop, not a quota.
+        // A global ceiling is a backstop, not a quota.
         hook: 'onRequest',
+        // In the database, not in memory: a serverless instance forgets everything between
+        // invocations, and the credential limit has to survive that.
+        store: createRateLimitStore(db),
       });
 
       await api.register(multipart, {

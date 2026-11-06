@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-/** Shared so the migration script resolves the same path the app will open. */
-export const DEFAULT_DATABASE_URL = './data/brewlog.db';
-export const DEFAULT_UPLOAD_DIR = './data/uploads';
+import { isPostgresUrl } from '../db/client.js';
+
+/** Local development keeps its database in this directory, as PGlite — nothing to install. */
+export const DEFAULT_DATABASE_URL = './data/pglite';
 
 const envSchema = z
   .object({
@@ -11,10 +12,12 @@ const envSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
-    // Paths, not secrets: a default here is a convenience, not a way to boot half-configured.
-    // The container overrides both with its volume paths.
+    /**
+     * `postgres://…` is a real server (Neon in production). `memory://` or a directory runs
+     * PGlite in-process, for tests and local development. The refinement below stops
+     * production from starting on anything but the first.
+     */
     DATABASE_URL: z.string().min(1).default(DEFAULT_DATABASE_URL),
-    UPLOAD_DIR: z.string().min(1).default(DEFAULT_UPLOAD_DIR),
     /**
      * Attempts allowed on register, sign-in and password change per address per quarter hour.
      * Configurable because the default that protects an account also stops a test suite from
@@ -22,22 +25,17 @@ const envSchema = z
      * suit the tests would mean the tests no longer describe production.
      */
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10_000).default(5),
-    // No defaults below this line. Starting without a real password or session key would mean
-    // running an unprotected journal that looks protected.
-    /**
-     * No longer an authentication mechanism — accounts replaced it. It survives as migration
-     * input: on the first start after that change it becomes the owner's account password.
-     * Once that account exists it is ignored, and can be removed from the environment.
-     */
-    AUTH_PASSWORD_HASH: z.string().min(1).optional(),
+    // No defaults below this line. Starting without a real session key would mean running
+    // an account system whose tokens anyone could forge.
     SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
-    /**
-     * Directory holding the built SPA. Set in the container, absent in development where Vite
-     * serves the frontend on its own port.
-     */
-    STATIC_DIR: z.string().min(1).optional(),
     SWAGGER_USER: z.string().min(1).optional(),
     SWAGGER_PASSWORD: z.string().min(1).optional(),
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || isPostgresUrl(env.DATABASE_URL), {
+    // PGlite on a serverless host would start, pass every health check, and lose the journal
+    // with the instance. Refusing to boot is the better failure.
+    error: 'DATABASE_URL must be a postgres:// connection string in production',
+    path: ['DATABASE_URL'],
   })
   .refine((env) => env.NODE_ENV === 'development' || (env.SWAGGER_USER && env.SWAGGER_PASSWORD), {
     error: 'SWAGGER_USER and SWAGGER_PASSWORD are required outside development',

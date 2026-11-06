@@ -1,1 +1,0 @@
-ALTER TABLE `brews` ADD `tds_percent` real;

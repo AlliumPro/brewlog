@@ -1,9 +1,13 @@
 name: CI
 
-# Pull requests only. A push to main is covered by deploy.yml, which runs the same gate before
-# it builds anything — running both would test the same commit twice.
+# Runs on pull requests and on main. Vercel builds and deploys on its own from the same
+# pushes; this workflow is the gate that says whether the code deserved it. Turn on branch
+# protection and require this check, so a red run blocks the merge instead of just
+# annotating it.
 on:
   pull_request:
+  push:
+    branches: [main]
 
 # A new push to the same branch makes the previous run pointless.
 concurrency:
@@ -27,7 +31,7 @@ jobs:
           cache: npm
 
       # setup-node ships npm 10 with Node 22; the lockfile is written by npm 11, which npm 10
-      # refuses to read in `ci` mode. Same pin as the Dockerfile.
+      # refuses to read in `ci` mode.
       - run: npm install -g npm@11.6.2
 
       # ci, not install: the lockfile is the contract, and a drifting tree is a failure.
@@ -53,60 +57,39 @@ jobs:
           git diff --exit-code apps/web/src/shared/api/generated.ts \
             || (echo "::error::Generated API types are stale. Run 'npm run gen:api' and commit the result." && exit 1)
 
-  docker:
+  smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v4
-
-      # Built but not pushed: a pull request proves the image still assembles without
-      # publishing anything.
-      - name: Build the image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: false
-          load: true
-          tags: brewlog:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Scan the image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: brewlog:ci
-          severity: HIGH,CRITICAL
-          exit-code: '1'
-          ignore-unfixed: true
-
-      # A built image proves it compiles, not that it runs. These are different failures:
-      # a corrupted secret, a missing native binding or a misconfigured static root all
-      # produce an image that builds perfectly and serves nothing.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+          cache: npm
 
-      - name: Run the image and smoke test it
+      - run: npm install -g npm@11.6.2
+
+      - run: npm ci
+
+      - run: npm run build:api
+
+      # verify proves the code; this proves the built artefact. The compiled API starts on
+      # real Postgres semantics (PGlite), native modules load on Linux, migrations apply from
+      # the shipped folder, and a photo survives the round trip through sharp and the database.
+      # What it cannot cover is Vercel itself — routing, headers and the function runtime are
+      # checked against the live deployment, see docs/RUNBOOK.md.
+      - name: Start the API and smoke test it
         env:
-          SMOKE_PASSWORD: smoke-test-only-passphrase
-          # A throwaway container, so registering into it costs nothing and covers the
-          # path unit tests cannot: real environment, real migration, real cookies.
-          SMOKE_ALLOW_REGISTER: '1'
+          SWAGGER_USER: ci
+          SWAGGER_PASSWORD: ci
         run: |
-          HASH=$(docker run --rm -e P="$SMOKE_PASSWORD" brewlog:ci \
-            node -e "import('@node-rs/argon2').then(a=>a.hash(process.env.P,{memoryCost:19456,timeCost:2,parallelism:1})).then(h=>console.log(h))")
-          docker run -d --name smoke -p 3000:3000 \
-            -e AUTH_PASSWORD_HASH="$HASH" \
-            -e SESSION_SECRET="$(openssl rand -hex 32)" \
-            -e SWAGGER_USER=ci -e SWAGGER_PASSWORD=ci \
-            brewlog:ci
+          NODE_ENV=test DATABASE_URL=memory:// SESSION_SECRET="$(openssl rand -hex 32)" \
+            SWAGGER_USER=ci SWAGGER_PASSWORD=ci PORT=3000 \
+            node apps/api/dist/index.js > api.log 2>&1 &
           for _ in $(seq 1 30); do
             curl -fsS http://localhost:3000/ready >/dev/null 2>&1 && break
             sleep 2
           done
-          SWAGGER_USER=ci SWAGGER_PASSWORD=ci npm run smoke
-          docker logs smoke
-          docker rm -f smoke
+          SMOKE_API_ONLY=1 SMOKE_ALLOW_REGISTER=1 npm run smoke || { cat api.log; exit 1; }

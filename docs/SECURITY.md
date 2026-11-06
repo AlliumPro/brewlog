@@ -7,6 +7,30 @@ plus the fixes described below.
 "Accepted gaps".** Note that the deployment phases (7–8) are out of scope for this version, so
 every transport-level control is designed but unverified — see "Deferred".
 
+## Addendum, 2026-11-06 — the move to Vercel
+
+Everything below was written against the single-user VPS deployment, and it predates both
+accounts ([ADR 0002](adr/0002-multi-user-jwt.md)) and this move
+([ADR 0003](adr/0003-vercel-and-postgres.md)). It has not been redone. This addendum records
+what the move changed; where it contradicts the text below, **the addendum wins**.
+
+| Area                       | Before                                               | Now                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TLS, firewall, SSH, nginx  | Ours to configure and patch                          | Vercel's. There is no server of ours left to harden, and no root SSH key to lose                                                                                     |
+| Container hardening, trivy | Part of the deploy                                   | No longer applies. `npm audit --omit=dev --audit-level=high` stays in CI                                                                                             |
+| Database exposure          | A file, never on the network                         | A network service (Neon) over TLS. "Database port not published" no longer holds: the protection is the credential in `DATABASE_URL` and Neon's own network settings |
+| Secrets                    | `/opt/brewlog/.env`, mode 600                        | Vercel environment variables — readable by anyone with access to the Vercel project. Local `.env` stays gitignored                                                   |
+| Preview deployments        | Did not exist                                        | They receive the environment variables you give them. Give previews their **own Neon branch**, or a preview of any pull request reads and writes production data     |
+| Content-Security-Policy    | Helmet, with the inline theme script allowed by hash | A header in `vercel.json` for the static site (`script-src 'self'`, no hash, no `unsafe-inline`); Helmet still sets headers on API and docs responses                |
+| Rate limiting              | In process memory                                    | A Postgres table. Counters survive redeploys and are shared by every instance, which is what makes the credential limit mean anything on a serverless host           |
+| Client address             | The nginx `X-Forwarded-For`                          | Vercel's. Putting a Cloudflare **proxy** in front would make every visitor appear as a Cloudflare address, and they would share one limit — keep the record DNS only |
+| Photos                     | Files on a volume                                    | Rows in `brew_photos`. Still served only through the session gate, still re-encoded with metadata stripped; they now ride along in any database dump or restore      |
+| Upload size                | 5 MB                                                 | 4 MB, below Vercel's 4.5 MB body limit                                                                                                                               |
+
+**Unverified until the first live deployment:** the headers `vercel.json` sets, the rewrites,
+cookie behaviour behind Vercel's proxy, the real Neon connection, and the client-address
+handling above. The checklist in [RUNBOOK.md](RUNBOOK.md) is how each gets checked.
+
 ## Threat model in one paragraph
 
 One user, one password, one machine. There are no other accounts to escalate into, no payment

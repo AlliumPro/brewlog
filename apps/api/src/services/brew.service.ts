@@ -83,7 +83,7 @@ export function toBrew(row: BrewRow): Brew {
     extractionPercent: computeExtraction(row),
     ratio: computeRatio(row.waterMl, row.doseGrams),
     daysAfterRoast: computeDaysAfterRoast(row.roastDate, row.brewedAt),
-    photoUrl: row.photoPath === null ? null : `/api/brews/${row.id}/photo`,
+    photoUrl: !row.hasPhoto ? null : `/api/brews/${row.id}/photo`,
     brewedAt: row.brewedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -114,7 +114,7 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
         id: uuidv7(),
         userId,
         ...input,
-        photoPath: null,
+        hasPhoto: false,
         createdAt: now,
         updatedAt: now,
       });
@@ -174,8 +174,7 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
         throw notFound('Brew');
       }
 
-      // The row is gone, so the file has nothing left pointing at it.
-      await photos.remove(id);
+      // The photo row goes with it: brew_photos cascades on the brew.
     },
 
     async attachPhoto(userId: string, id: string, file: Buffer): Promise<Brew> {
@@ -185,9 +184,9 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
         throw notFound('Brew');
       }
 
-      const photoPath = await photos.store(id, file);
+      await photos.store(id, file);
       const row = await repository.update(userId, id, {
-        photoPath,
+        hasPhoto: true,
         updatedAt: new Date().toISOString(),
       });
 
@@ -198,19 +197,21 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
       return toBrew(row);
     },
 
-    /** Resolves the on-disk path only for a brew that actually has a photo. */
-    async photoPath(userId: string, id: string): Promise<string> {
+    /** The bytes, only for a brew that is the caller's and actually has a photo. */
+    async photo(userId: string, id: string): Promise<Buffer> {
       const row = await repository.findById(userId, id);
 
       if (row === undefined) {
         throw notFound('Brew');
       }
 
-      if (row.photoPath === null) {
+      const data = row.hasPhoto ? await photos.read(id) : undefined;
+
+      if (data === undefined) {
         throw notFound('Photo');
       }
 
-      return row.photoPath;
+      return data;
     },
 
     async detachPhoto(userId: string, id: string): Promise<void> {
@@ -220,12 +221,12 @@ export function createBrewService(repository: BrewRepository, photos: PhotoServi
         throw notFound('Brew');
       }
 
-      if (row.photoPath === null) {
+      if (!row.hasPhoto) {
         throw notFound('Photo');
       }
 
       await photos.remove(id);
-      await repository.update(userId, id, { photoPath: null, updatedAt: new Date().toISOString() });
+      await repository.update(userId, id, { hasPhoto: false, updatedAt: new Date().toISOString() });
     },
 
     async suggestBeans(userId: string, q: string | undefined, limit: number): Promise<string[]> {

@@ -1,7 +1,9 @@
+import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { App } from '../app.js';
+import { brewPhotos } from '../db/schema.js';
 import { createTestApp, login, multipartBody, sampleBrew } from '../test/helpers.js';
 import type { TestContext } from '../test/helpers.js';
 
@@ -138,6 +140,28 @@ describe('photos', () => {
     });
 
     expect(again.statusCode).toBe(404);
+  });
+
+  it('removes the stored bytes together with the brew', async () => {
+    const id = await createBrew();
+    const { payload, contentType } = multipartBody(await makePng(), 'cup.png', 'image/png');
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/brews/${id}/photo`,
+      headers: { cookie, 'content-type': contentType },
+      payload,
+    });
+
+    const stored = await context.db.select().from(brewPhotos).where(eq(brewPhotos.brewId, id));
+    expect(stored).toHaveLength(1);
+
+    await app.inject({ method: 'DELETE', url: `/api/brews/${id}`, headers: { cookie } });
+
+    // Nothing left behind: a photo of a deleted brew would be an orphan nobody can reach and
+    // nobody would ever clean up.
+    const after = await context.db.select().from(brewPhotos).where(eq(brewPhotos.brewId, id));
+    expect(after).toHaveLength(0);
   });
 
   it('requires a session to read a photo', async () => {

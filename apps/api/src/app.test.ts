@@ -1,10 +1,8 @@
-import { createHash } from 'node:crypto';
-
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { App } from './app.js';
 import { loadEnv } from './config/env.js';
-import { createTestApp, TEST_INLINE_SCRIPT } from './test/helpers.js';
+import { createTestApp } from './test/helpers.js';
 import type { TestContext } from './test/helpers.js';
 
 describe('app', () => {
@@ -86,55 +84,15 @@ describe('app', () => {
   });
 });
 
-describe('serving the built SPA', () => {
+describe('the API surface', () => {
   let context: TestContext;
 
   beforeAll(async () => {
-    context = await createTestApp({ withStatic: true });
+    context = await createTestApp();
   });
 
   afterAll(async () => {
     await context.close();
-  });
-
-  it('serves index.html at the root', async () => {
-    // Regression: with `index: false` the plugin treated "/" as a directory listing and
-    // answered 403, so the front page was the one URL that did not work.
-    const response = await context.app.inject({ method: 'GET', url: '/' });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('<div id="root">');
-  });
-
-  it('falls back to index.html for a client-side route', async () => {
-    const response = await context.app.inject({ method: 'GET', url: '/brews/whatever' });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('<div id="root">');
-  });
-
-  it('allows the page its own inline script by hash, not by unsafe-inline', async () => {
-    const response = await context.app.inject({ method: 'GET', url: '/' });
-    const csp = response.headers['content-security-policy'];
-    const expected = createHash('sha256').update(TEST_INLINE_SCRIPT, 'utf8').digest('base64');
-
-    expect(csp).toContain(`'sha256-${expected}'`);
-
-    // The whole point of hashing it: the escape hatch stays closed for scripts. It is open
-    // for style *attributes* on purpose — Radix positions popovers by writing to them — and
-    // asserting on the whole header would conflate the two.
-    const scriptSrc = /(?:^|;)\s*script-src ([^;]*)/.exec(csp ?? '')?.[1];
-
-    expect(scriptSrc).toBeDefined();
-    expect(scriptSrc).not.toContain("'unsafe-inline'");
-  });
-
-  it('lets the service worker and the manifest load', async () => {
-    const response = await context.app.inject({ method: 'GET', url: '/' });
-    const csp = response.headers['content-security-policy'];
-
-    expect(csp).toContain('worker-src');
-    expect(csp).toContain('manifest-src');
   });
 
   it('still answers unknown API paths with the JSON envelope, not HTML', async () => {
@@ -170,6 +128,25 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...rest, NODE_ENV: 'production' })).toThrow(
       /SWAGGER_USER and SWAGGER_PASSWORD are required/,
     );
+  });
+
+  it('refuses to run in production on anything but a Postgres server', () => {
+    // PGlite would boot, answer every health check, and lose the journal with the instance.
+    const production = {
+      ...process.env,
+      NODE_ENV: 'production',
+      SWAGGER_USER: 'u',
+      SWAGGER_PASSWORD: 'p',
+    };
+
+    expect(() => loadEnv({ ...production, DATABASE_URL: 'memory://' })).toThrow(
+      /DATABASE_URL must be a postgres:\/\/ connection string in production/,
+    );
+    expect(() => loadEnv({ ...production, DATABASE_URL: './data/pglite' })).toThrow(/DATABASE_URL/);
+    expect(
+      loadEnv({ ...production, DATABASE_URL: 'postgres://user:pw@host/db?sslmode=require' })
+        .DATABASE_URL,
+    ).toContain('postgres://');
   });
 
   it('reports the variable name but never its value', () => {

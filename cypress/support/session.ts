@@ -9,8 +9,9 @@
  * cy.session caches the cookie; `cacheAcrossSpecs` extends that to the second spec file, so a
  * full run costs one successful login plus the one deliberate failure in the login test.
  *
- * If a run does hit the limit, restart the API: the counter lives in memory, not in the
- * database, so it clears on restart.
+ * If a run does hit the limit, wait out the quarter hour, or clear the counters:
+ * `delete from rate_limits` in the local database. They live in the database now, so
+ * restarting the API no longer resets them.
  */
 export function loginOnce(): void {
   cy.session(

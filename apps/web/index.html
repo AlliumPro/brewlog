@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <!-- Both schemes are supported; form controls and scrollbars follow the active one. -->
     <meta name="color-scheme" content="light dark" />
-    <!-- Content is set by the script below before first paint, then kept in sync by useTheme. -->
+    <!-- Content is set by theme.js before first paint, then kept in sync by useTheme. -->
     <meta name="theme-color" content="#fbf9fc" />
     <!-- iOS ignores the manifest icon for the home screen and uses this one. -->
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -17,31 +17,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="BrewLog" />
     <title>BrewLog</title>
-    <script>
-      /**
-       * Synchronous and inline on purpose. React mounts after the first paint, so reading the
-       * stored choice from a component would let the wrong theme flash first. Under CSP this
-       * script is allowed by its hash, never by 'unsafe-inline'.
-       *
-       * The two colours mirror --color-bg in tokens.css.
-       */
-      (function () {
-        try {
-          var stored = localStorage.getItem('theme');
-          if (stored === 'light' || stored === 'dark') {
-            document.documentElement.dataset.theme = stored;
-          }
-          var dark =
-            stored === 'dark' ||
-            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          document
-            .querySelector('meta[name="theme-color"]')
-            .setAttribute('content', dark ? '#110d12' : '#fbf9fc');
-        } catch (e) {
-          /* blocked storage: fall through to the system preference */
-        }
-      })();
-    </script>
+    <!-- Blocking on purpose: it sets the theme before first paint. See public/theme.js. -->
+    <script src="/theme.js"></script>
   </head>
   <body>
     <div id="root"></div>

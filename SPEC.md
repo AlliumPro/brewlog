@@ -96,7 +96,11 @@ core scope is complete; see §8.
 
 ## 4. Data model
 
-SQLite via Drizzle. Ids are UUIDv7 strings (time-sortable, no collisions on merge).
+Postgres via Drizzle (Neon in production; PGlite in tests and local development), changed from
+SQLite by [ADR 0003](docs/adr/0003-vercel-and-postgres.md). Ids are UUIDv7 strings
+(time-sortable, no collisions on merge). Photos are rows in `brew_photos`, not files; the table
+columns here predate that change and the schema in `apps/api/src/db/schema.ts` is the
+authority.
 
 ### `brews`
 
@@ -251,19 +255,21 @@ headers, or photo contents. Tasting notes are user content and stay out of logs 
 - Frontend: Vite + React 19 + TypeScript strict, React Router, Feature-Sliced Design, CSS Modules
   with `radix-ui` primitives, Recharts for charts. See `docs/adr/0001-stack.md`.
 - Backend: Node 22 + Fastify + TypeScript + Zod with `fastify-type-provider-zod`, OpenAPI generated
-  from the schemas, SQLite + Drizzle.
+  from the schemas, Postgres + Drizzle.
 - State: server state through RTK Query; filters, search and pagination live in the URL so a
   filtered view survives a reload and can be bookmarked; Redux slice only for session state.
-- Both apps in one repository, deployed as one container serving the API and the built static
-  frontend.
+- Both apps in one repository, deployed on Vercel: the built frontend as static files on the CDN
+  and the API as one serverless function on the same origin
+  ([ADR 0003](docs/adr/0003-vercel-and-postgres.md)). Earlier versions of this spec described one
+  container on a VPS.
 
 ## 8. Out of scope for v1
 
 - Multi-user accounts, registration, password recovery, roles.
 - Social features: sharing, comments, likes, public profiles.
 - Offline mode and PWA install (decided in phase 0 — adaptive layout only).
-- VPS deployment, domain, TLS, metrics, logs and alerting (phases 7–8, deferred until a server
-  exists; the Docker image and compose file are still produced in phase 6).
+- Metrics, log aggregation and alerting (phase 8). Hosting is Vercel + Neon; the VPS, Docker
+  image and compose files described in earlier versions were removed.
 - External integrations: payments, mail, maps, analytics, roaster APIs.
 - Data export/import, bulk editing, multiple photos per brew, tags.
 

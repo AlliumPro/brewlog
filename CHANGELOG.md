@@ -24,9 +24,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ### Changed
 
-- **The site moved to https://brewlog.hmstd.dev.** The old brewlog.duckdns.org answers with a
-  permanent redirect. Sessions are bound to the host, so everyone signs in once more after the
-  move; an installed PWA has to be reinstalled from the new address.
+- **Hosting moved from a VPS to Vercel, and the database from SQLite to Postgres (Neon)**, at
+  https://brewlog.hmstd.dev. The SPA is static files on the CDN; the API is one serverless
+  function. See [ADR 0003](docs/adr/0003-vercel-and-postgres.md) for why and what it cost.
+  **Every account and brew made on the old server is gone** — the server was deleted before
+  the move and nothing was migrated. Sessions are bound to the host, so an installed PWA has to
+  be reinstalled from the new address.
+- Photos are stored in the database instead of on a disk, and the upload limit is 4 MB instead of
+  5 MB, because Vercel refuses larger request bodies before the function sees them.
+- Credential rate limiting is counted in the database, so it survives redeploys and is shared by
+  every function instance. Restarting no longer clears a lockout.
+- Search by bean name and roaster uses `ilike`. Cyrillic matches regardless of case on PGlite;
+  on a real server that depends on the database's collation, which has not been checked on Neon.
+- The theme script is a file (`/theme.js`) instead of an inline script, so the Content-Security-
+  Policy needs no hash and `script-src` is just `'self'`.
+- Migrations are applied by the API itself on first request, under an advisory lock. `db:migrate`
+  and `auth:hash` are gone, along with `AUTH_PASSWORD_HASH`, `UPLOAD_DIR` and `STATIC_DIR`.
+
+### Removed
+
+- The Dockerfile, both compose files, the release workflow that published an image, and the SSH
+  deploy job. Vercel deploys on every push; CI is the gate and needs branch protection to be
+  one. A CI smoke job now starts the built API and checks it, including a photo round trip.
+
+### Not yet verified
+
+- The live deployment: Vercel routing and headers, the native binaries on its runtime, a real
+  Neon connection. Checklist in [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ### Fixed
 

@@ -10,12 +10,12 @@ import { brews } from '../db/schema.js';
 export function createStatsRepository(db: Db) {
   return {
     async ratingOverTime(userId: string) {
-      const month = sql<string>`strftime('%Y-%m', ${brews.brewedAt})`;
+      const month = sql<string>`left(${brews.brewedAt}, 7)`;
 
       return db
         .select({
           month,
-          avgRating: sql<number>`round(avg(${brews.rating}), 2)`,
+          avgRating: sql<number>`round(avg(${brews.rating})::numeric, 2)::float8`,
           count: count(),
         })
         .from(brews)
@@ -27,7 +27,7 @@ export function createStatsRepository(db: Db) {
     async ratingByRatio(userId: string, limit: number) {
       return db
         .select({
-          ratio: sql<number>`round(${brews.waterMl} / ${brews.doseGrams}, 2)`,
+          ratio: sql<number>`round((${brews.waterMl} / ${brews.doseGrams})::numeric, 2)::float8`,
           rating: brews.rating,
           method: brews.method,
         })
@@ -48,7 +48,7 @@ export function createStatsRepository(db: Db) {
 
     /** Beans with a single brew are excluded: one lucky cup would top the chart forever. */
     async topBeans(userId: string, minBrews: number, limit: number) {
-      const avgRating = sql<number>`round(avg(${brews.rating}), 2)`;
+      const avgRating = sql<number>`round(avg(${brews.rating})::numeric, 2)::float8`;
 
       return db
         .select({ beanName: brews.beanName, avgRating, count: count() })

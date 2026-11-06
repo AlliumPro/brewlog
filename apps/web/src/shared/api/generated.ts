@@ -1126,7 +1126,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description File larger than 5 MB */
+                /** @description File larger than 4 MB */
                 413: {
                     headers: {
                         [name: string]: unknown;

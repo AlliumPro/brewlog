@@ -5,7 +5,7 @@
   "description": "Personal specialty coffee brewing journal",
   "type": "module",
   "engines": {
-    "node": ">=22.12.0",
+    "node": "22.x",
     "npm": ">=11.0.0"
   },
   "workspaces": [
@@ -18,8 +18,9 @@
     "build": "run-s build:api build:web",
     "build:api": "npm run build --workspace @brewlog/api",
     "build:web": "npm run build --workspace @brewlog/web",
-    "typecheck": "run-s typecheck:apps typecheck:e2e",
+    "typecheck": "run-s typecheck:apps typecheck:function typecheck:e2e",
     "typecheck:apps": "npm run typecheck --workspaces --if-present",
+    "typecheck:function": "tsc --noEmit -p api/tsconfig.json",
     "typecheck:e2e": "tsc --noEmit -p cypress/tsconfig.json",
     "lint": "run-s lint:es lint:fsd lint:css lint:format",
     "lint:es": "eslint . --max-warnings 0",
@@ -36,7 +37,6 @@
     "verify": "run-s typecheck lint contrast test build",
     "smoke": "node --env-file-if-exists=.env scripts/smoke.js",
     "db:generate": "npm run db:generate --workspace @brewlog/api",
-    "db:migrate": "npm run db:migrate --workspace @brewlog/api",
     "openapi:export": "npm run openapi:export --workspace @brewlog/api",
     "gen:api": "npm run gen:api --workspace @brewlog/web",
     "prepare": "husky",
