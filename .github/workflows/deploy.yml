@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 25
     environment:
       name: production
-      url: https://brewlog.duckdns.org
+      url: https://brewlog.hmstd.dev
 
     steps:
       - uses: actions/checkout@v7
@@ -148,9 +148,9 @@ jobs:
           # From outside the host: proves nginx, the certificate and the proxy path, none of
           # which the loopback check above can see.
           for attempt in $(seq 1 10); do
-            code=$(curl -fsS -o /dev/null -w '%{http_code}' https://brewlog.duckdns.org/health || true)
+            code=$(curl -fsS -o /dev/null -w '%{http_code}' https://brewlog.hmstd.dev/health || true)
             if [ "$code" = "200" ]; then
-              echo "https://brewlog.duckdns.org/health → 200"
+              echo "https://brewlog.hmstd.dev/health → 200"
               exit 0
             fi
             sleep 3

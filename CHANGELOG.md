@@ -22,6 +22,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - **Account screen** with a Profile tab for the display name and an Appearance tab for the
   theme. The name is used to greet the owner on the journal screen.
 
+### Changed
+
+- **The site moved to https://brewlog.hmstd.dev.** The old brewlog.duckdns.org answers with a
+  permanent redirect. Sessions are bound to the host, so everyone signs in once more after the
+  move; an installed PWA has to be reinstalled from the new address.
+
 ### Fixed
 
 - The inline theme script violated `script-src 'self'`, so in the container the browser refused

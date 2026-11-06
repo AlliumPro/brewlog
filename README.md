@@ -1,6 +1,6 @@
 # BrewLog
 
-Live at **https://brewlog.duckdns.org**. Every push to `main` deploys itself; see
+Live at **https://brewlog.hmstd.dev**. Every push to `main` deploys itself; see
 [docs/RUNBOOK.md](docs/RUNBOOK.md) for the host, rollback and backups.
 
 A personal specialty coffee brewing journal. Record the parameters of a brew — method, bean,
@@ -149,7 +149,7 @@ deviates from the house defaults and why, is in [docs/adr/0001-stack.md](docs/ad
 
 ## Status
 
-Live at https://brewlog.duckdns.org, deployed automatically from `main`. TLS, the firewall,
+Live at https://brewlog.hmstd.dev, deployed automatically from `main`. TLS, the firewall,
 key-only SSH and daily backups are in place and were exercised, not merely written.
 
 Still missing: metrics, log aggregation and alerting. **Nobody is watching this service** — if

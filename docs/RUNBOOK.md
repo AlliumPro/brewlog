@@ -134,12 +134,13 @@ one case where rollback alone will not save you.
 
 |             |                                                                   |
 | ----------- | ----------------------------------------------------------------- |
-| Site        | https://brewlog.duckdns.org                                       |
+| Site        | https://brewlog.hmstd.dev — the old brewlog.duckdns.org redirects |
 | Host        | 95.182.88.29 — Ubuntu 24.04, 1 vCPU, 961 MB, 10 GB                |
 | Application | `/opt/brewlog`, owned by `deploy`                                 |
 | Container   | one, published on `127.0.0.1:3000` only; nginx faces the internet |
 | Data        | Docker volume `brewlog_brewlog-data` — database and photos        |
 | Certificate | Let's Encrypt via certbot, renewed by a systemd timer             |
+| DNS         | `hmstd.dev` at Cloudflare; `brewlog` is an A record, DNS only     |
 
 Access is by key only, passwords are refused, and `ufw` admits 22, 80 and 443. Two keys reach
 `deploy`: the owner's and a separate one used solely by GitHub Actions. `root` accepts the
