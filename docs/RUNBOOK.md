@@ -4,9 +4,9 @@ BrewLog runs on **Vercel** (static SPA on the CDN, one serverless function for t
 **Neon** Postgres database. The decision and what it cost are in
 [adr/0003-vercel-and-postgres.md](adr/0003-vercel-and-postgres.md).
 
-**Nothing here has been run against the live deployment yet.** The code, the migrations and the
-function as Vercel's own builder packages it were tested locally; the first real deploy is the
-open item in the checklist below. Treat every step as unverified until it is ticked.
+The first deployment passed the full smoke test on 2026-11-07 at https://brewlog-kappa.vercel.app.
+The custom domain, backups and restores have **not** been exercised: treat those steps as
+unverified until they are.
 
 ## Where things are
 

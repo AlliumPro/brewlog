@@ -49,8 +49,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ### Not yet verified
 
-- The live deployment: Vercel routing and headers, the native binaries on its runtime, a real
-  Neon connection. Checklist in [docs/RUNBOOK.md](docs/RUNBOOK.md).
+- The custom domain brewlog.hmstd.dev and a restore from Neon. The deployment itself passed the
+  full smoke test at https://brewlog-kappa.vercel.app on 2026-11-07.
 
 ### Fixed
 

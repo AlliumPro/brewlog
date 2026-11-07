@@ -1,7 +1,8 @@
 # BrewLog
 
-Live at **https://brewlog.hmstd.dev**, hosted on Vercel with a Postgres database on Neon. Every
-push to `main` deploys itself; see [docs/RUNBOOK.md](docs/RUNBOOK.md) for the setup, rollback
+Live at **https://brewlog-kappa.vercel.app** (the custom domain brewlog.hmstd.dev is planned, not
+connected yet), hosted on Vercel with a Postgres database on Neon. Every push to `main` deploys
+itself; see [docs/RUNBOOK.md](docs/RUNBOOK.md) for the setup, rollback
 and what to check after a deploy.
 
 A personal specialty coffee brewing journal. Record the parameters of a brew — method, bean,
@@ -10,6 +11,17 @@ parameters reliably produce a better cup.
 
 Anyone can register; each account keeps its own journal and sees nothing of anyone else's. Not
 a social product and not a tracker: a quiet notebook that happens to do arithmetic.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/brew-details.png" width="220" alt="A brew: ratio, time, temperature, extraction and tasting notes" /><br /><sub>A brew</sub></td>
+    <td align="center"><img src="docs/screenshots/log-a-brew.png" width="220" alt="The form for logging a new brew, with a live ratio" /><br /><sub>Log a brew</sub></td>
+    <td align="center"><img src="docs/screenshots/statistics.png" width="220" alt="Statistics: rating over time and rating against ratio" /><br /><sub>Statistics</sub></td>
+    <td align="center"><img src="docs/screenshots/account-light.png" width="220" alt="The account screen in the light theme" /><br /><sub>Account, light theme</sub></td>
+  </tr>
+</table>
 
 ## Requirements
 
@@ -147,9 +159,10 @@ defaults and why, is in [docs/adr/0001-stack.md](docs/adr/0001-stack.md) and
 
 ## Status
 
-Moved from a single VPS to Vercel and Neon. The code, the migrations and the built function are
-tested; **the live deployment has not been verified yet** — that is the first item in the
-runbook's setup checklist, and the status stays this way until it is ticked.
+Moved from a single VPS to Vercel and Neon. On 2026-11-07 the full smoke test passed against the
+live deployment at https://brewlog-kappa.vercel.app: registration, sign-in, brews, recipes, a photo
+round trip, the CSP header and the rewrites. **Not yet done:** connecting the custom domain
+brewlog.hmstd.dev, and rehearsing a restore from Neon.
 
 Still missing: metrics, log aggregation beyond what Vercel keeps, and alerting. **Nobody is
 watching this service** — if it falls over, the way you find out is by opening it.
